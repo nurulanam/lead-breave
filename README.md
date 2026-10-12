@@ -1,58 +1,136 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# LeadBreave
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+LeadBreave is an internal tool for finding local businesses on Google Maps, auditing their websites and sending outreach emails with automatic follow-ups. It replaces the **LeadMap** WordPress plugin.
 
-## About Laravel
+The workflow it supports:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+1. Search Google Maps by industry and ZIP code.
+2. Collect each business's name, phone, website, emails, social links and YouTube channel. Missing details can be entered by hand.
+3. Audit the website (design, speed, SEO, backlinks). PageSpeed runs from a manual button.
+4. Write an email with the major issues first and the minor issues below.
+5. Send it.
+6. Send an automatic follow-up after 2 business days if there is no reply.
+7. Propose a meeting (Zoom, Google Meet or a booking link).
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The build plan is in [PHASES.md](PHASES.md) and the original requirements are in [requiments.md](requiments.md). **Phase 0 (foundation) is done**, so the app currently has login, users and roles, settings and the queue setup. Lead features start in Phase 1.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Stack
 
-## Learning Laravel
+| Part | Choice |
+| --- | --- |
+| Framework | Laravel 13, PHP 8.3+ |
+| Admin UI | Filament 5 (Livewire), served at `/admin` |
+| Roles and permissions | spatie/laravel-permission |
+| Settings | spatie/laravel-settings (API keys are stored encrypted) |
+| Queues | Redis + Laravel Horizon (`predis` client, so no PHP extension is needed) |
+| Local services | Laravel Sail: MySQL 8.4, Redis, Mailpit |
+| Tooling | Pest, Larastan (level 6), Pint, Telescope (local only) |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Getting started
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Option A: Sail (Docker)
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+This is the full setup, with Redis, Horizon and Mailpit.
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```sh
+composer install
+cp .env.example .env
+php artisan key:generate
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan migrate --seed
+./vendor/bin/sail artisan horizon
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Open http://localhost. Mailpit is at http://localhost:8025.
 
-## Contributing
+If Docker says `permission denied` on `/var/run/docker.sock`, add yourself to the `docker` group (`sudo usermod -aG docker $USER`) and log in again.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Option B: without Docker (Valet, `artisan serve`)
 
-## Code of Conduct
+```sh
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Then edit `.env`:
 
-## Security Vulnerabilities
+- Point `DB_*` at your local MySQL (or set `DB_CONNECTION=sqlite`).
+- Without Redis, set `QUEUE_CONNECTION=database`, `CACHE_STORE=database` and `SESSION_DRIVER=database`. Horizon will not run in this mode.
+- Set `APP_URL` to the address you open in the browser (for example `http://lead-breave.test` under Valet).
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```sh
+php artisan migrate --seed
+```
 
-## License
+### Logging in
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+In `local` the seeder creates one user per role. The password for each is `password`.
+
+| Email | Role |
+| --- | --- |
+| admin@example.com | admin |
+| researcher@example.com | researcher |
+| sender@example.com | sender |
+
+In other environments the seeder only creates the roles. Create the first admin with tinker:
+
+```sh
+php artisan tinker --execute 'App\Models\User::create(["name" => "Admin", "email" => "you@example.com", "password" => "change-me"])->assignRole("admin");'
+```
+
+## Roles
+
+| Role | Can |
+| --- | --- |
+| `admin` | Everything: manage users and settings, open Horizon and Telescope |
+| `researcher` | Run searches, edit and audit leads |
+| `sender` | Edit and audit leads, send outreach |
+
+Roles and permissions are defined in [app/Enums/Role.php](app/Enums/Role.php) and [app/Enums/Permission.php](app/Enums/Permission.php). After changing them, run `php artisan db:seed --class=RolesAndPermissionsSeeder`. It is safe to run more than once. Users without a role cannot open the panel.
+
+## Settings
+
+Admins manage settings in the panel under **Settings**:
+
+- **General**: company name, sender name and email, postal address (required in outreach footers), booking link and timezone.
+- **API keys**: Google Places, PageSpeed Insights and Anthropic. The keys are encrypted in the database and are never sent back to the browser. A blank field keeps the saved key.
+
+In code, read them from the settings classes:
+
+```php
+app(App\Settings\ApiSettings::class)->google_places_key;
+```
+
+To add a setting, add a property to the class in [app/Settings](app/Settings) and a settings migration in [database/settings](database/settings).
+
+## Queues
+
+Each kind of work has its own queue and its own Horizon supervisor ([config/horizon.php](config/horizon.php)):
+
+| Queue | Used for | Processes | Timeout |
+| --- | --- | --- | --- |
+| `search` | Google Places searches | 2 | 60s |
+| `enrich` | Website crawls (emails, socials, SEO) | 1–5, auto-scaled | 120s |
+| `pagespeed` | PageSpeed / Lighthouse runs | 1 | 180s |
+| `mail` | Outreach emails | 1 | 60s |
+| `default` | Everything else | 1–3 | 60s |
+
+`REDIS_QUEUE_RETRY_AFTER` (240s) must stay above the longest timeout, or a slow job can run twice. A test checks this.
+
+Horizon is at `/horizon` and Telescope at `/telescope`. Outside `local`, only admins can open them.
+
+## Development
+
+```sh
+composer dev                                       # app server, queue, logs and Vite
+php artisan test --compact                         # Pest
+vendor/bin/pint                                    # format code
+vendor/bin/phpstan analyse --memory-limit=1G       # Larastan, level 6
+```
+
+Tests use an in-memory SQLite database, so they need no MySQL or Redis.
+
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs Pint, Larastan and Pest on every pull request and on pushes to `main`. Run all three before you push.
+
+AI coding agents should follow the guidelines in [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md), which Laravel Boost generates.

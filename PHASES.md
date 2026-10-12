@@ -57,19 +57,21 @@ These are my recommendations. Change any of them and I will adjust the phases.
 
 **Goal:** an empty app that runs, with good tooling and the infrastructure in place.
 
-- [ ] Create the Laravel project, `.env.example`, Sail/Docker (app, MySQL, Redis, Mailpit).
+- [x] Create the Laravel project, `.env.example`, Sail/Docker (app, MySQL, Redis, Mailpit).
 
-- [ ] Install Filament, Horizon, Pest, Larastan (level 6+), Pint, Laravel Telescope (dev only).
+- [x] Install Filament, Horizon, Pest, Larastan (level 6+), Pint, Laravel Telescope (dev only).
 
-- [ ] Auth, users and roles/permissions (spatie/laravel-permission): `admin`, `researcher`, `sender`.
+- [x] Auth, users and roles/permissions (spatie/laravel-permission): `admin`, `researcher`, `sender`.
 
-- [ ] A settings store (`spatie/laravel-settings` or a `settings` table). API keys are encrypted with Laravel's `encrypted` cast and never sent to the browser.
+- [x] A settings store (`spatie/laravel-settings` or a `settings` table). API keys are encrypted with Laravel's `encrypted` cast and never sent to the browser.
 
-- [ ] Queues: `search`, `enrich`, `pagespeed`, `mail`, `default`, each with its own concurrency in Horizon.
+- [x] Queues: `search`, `enrich`, `pagespeed`, `mail`, `default`, each with its own concurrency in Horizon.
 
-- [ ] CI with GitHub Actions: Pint, Larastan, Pest.
+- [x] CI with GitHub Actions: Pint, Larastan, Pest.
 
 **Done when:** you can log in, Horizon is green, and CI passes.
+
+> **Done (2026-10-12).** Notes: Filament **5** was installed (it replaced 4 as the current major). Redis uses `predis`, so no PHP extension is needed. Telescope only loads in `local`. API keys are managed on a write-only page (Settings > API keys). Horizon needs Redis, so run it through Sail (`./vendor/bin/sail up -d && ./vendor/bin/sail artisan horizon`).
 
 ## Phase 1: Data model
 
