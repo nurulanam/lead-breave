@@ -37,6 +37,7 @@ composer install
 cp .env.example .env
 php artisan key:generate
 ./vendor/bin/sail up -d
+./vendor/bin/sail npm install && ./vendor/bin/sail npm run build
 ./vendor/bin/sail artisan migrate --seed
 ./vendor/bin/sail artisan horizon
 ```
@@ -60,6 +61,7 @@ Then edit `.env`:
 - Set `APP_URL` to the address you open in the browser (for example `http://lead-breave.test` under Valet).
 
 ```sh
+npm install && npm run build
 php artisan migrate --seed
 ```
 
@@ -129,7 +131,9 @@ vendor/bin/pint                                    # format code
 vendor/bin/phpstan analyse --memory-limit=1G       # Larastan, level 6
 ```
 
-Tests use an in-memory SQLite database, so they need no MySQL or Redis.
+Tests use an in-memory SQLite database, so they need no MySQL or Redis. They do need built assets (`npm run build`), because the panel loads its theme through Vite.
+
+The panel theme lives in [resources/css/filament/admin/theme.css](resources/css/filament/admin/theme.css), and the custom login, dashboard widgets and logo are under [resources/views/filament](resources/views/filament). After changing Tailwind classes in those views, rebuild with `npm run build` (or keep `npm run dev` running).
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs Pint, Larastan and Pest on every pull request and on pushes to `main`. Run all three before you push.
 

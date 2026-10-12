@@ -32,6 +32,16 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build assets
+        run: |
+          npm ci
+          npm run build
+
       - name: Prepare environment
         run: |
           cp .env.example .env

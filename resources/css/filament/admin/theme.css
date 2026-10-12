@@ -1,0 +1,343 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+/*
+ * LeadBreave "Aurora" theme.
+ *
+ * One palette drives every gradient: cyan, sky, violet, fuchsia and emerald.
+ * Surfaces are frosted glass over a slow-moving aurora field, with a fine
+ * grain layer so gradients read as light rather than flat colour.
+ */
+
+:root {
+    --lb-cyan: #22d3ee;
+    --lb-sky: #38bdf8;
+    --lb-violet: #8b5cf6;
+    --lb-fuchsia: #e879f9;
+    --lb-emerald: #34d399;
+    --lb-ink: #070b18;
+
+    --lb-aurora-opacity: 0.38;
+    --lb-glass: rgb(255 255 255 / 0.62);
+    --lb-glass-strong: rgb(255 255 255 / 0.82);
+    --lb-glass-ring: rgb(15 23 42 / 0.07);
+    --lb-glass-edge: rgb(255 255 255 / 0.7);
+    --lb-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -16px rgb(30 27 75 / 0.18);
+    --lb-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+.dark {
+    --lb-aurora-opacity: 0.32;
+    --lb-glass: rgb(15 20 40 / 0.55);
+    --lb-glass-strong: rgb(15 20 40 / 0.75);
+    --lb-glass-ring: rgb(255 255 255 / 0.08);
+    --lb-glass-edge: rgb(255 255 255 / 0.06);
+    --lb-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -20px rgb(0 0 0 / 0.6);
+}
+
+/* ---------------------------------------------------------------------
+ * Aurora field
+ * ------------------------------------------------------------------- */
+
+@keyframes lb-drift-a {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    100% {
+        transform: translate3d(8vw, 6vh, 0) scale(1.15);
+    }
+}
+
+@keyframes lb-drift-b {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1.1);
+    }
+    100% {
+        transform: translate3d(-10vw, 4vh, 0) scale(0.95);
+    }
+}
+
+@keyframes lb-drift-c {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    100% {
+        transform: translate3d(4vw, -8vh, 0) rotate(25deg);
+    }
+}
+
+@keyframes lb-sheen {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 100% 50%;
+    }
+}
+
+.lb-aurora {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.lb-aurora-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    opacity: var(--lb-aurora-opacity);
+    will-change: transform;
+}
+
+.lb-aurora-blob-a {
+    top: -18vh;
+    left: 8vw;
+    width: 46vw;
+    height: 46vh;
+    background: radial-gradient(closest-side, var(--lb-violet), transparent);
+    animation: lb-drift-a 26s ease-in-out infinite alternate;
+}
+
+.lb-aurora-blob-b {
+    top: -10vh;
+    right: -6vw;
+    width: 42vw;
+    height: 52vh;
+    background: radial-gradient(closest-side, var(--lb-cyan), transparent);
+    animation: lb-drift-b 32s ease-in-out infinite alternate;
+}
+
+.lb-aurora-blob-c {
+    top: 30vh;
+    left: 40vw;
+    width: 36vw;
+    height: 40vh;
+    background: radial-gradient(closest-side, var(--lb-fuchsia), transparent);
+    opacity: calc(var(--lb-aurora-opacity) * 0.6);
+    animation: lb-drift-c 38s ease-in-out infinite alternate;
+}
+
+.lb-aurora-blob-d {
+    bottom: -20vh;
+    left: -8vw;
+    width: 40vw;
+    height: 46vh;
+    background: radial-gradient(closest-side, var(--lb-emerald), transparent);
+    opacity: calc(var(--lb-aurora-opacity) * 0.7);
+    animation: lb-drift-b 30s ease-in-out infinite alternate;
+}
+
+.lb-grain {
+    position: absolute;
+    inset: 0;
+    background-image: var(--lb-grain);
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+}
+
+.dark .lb-grain {
+    opacity: 0.09;
+}
+
+/* A self-contained aurora panel (hero card, login backdrop). */
+.lb-aurora-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--lb-ink);
+    background-image:
+        radial-gradient(60% 80% at 12% 10%, rgb(34 211 238 / 0.55), transparent 60%),
+        radial-gradient(50% 70% at 78% 0%, rgb(139 92 246 / 0.7), transparent 60%),
+        radial-gradient(45% 60% at 95% 85%, rgb(232 121 249 / 0.35), transparent 60%),
+        radial-gradient(55% 70% at 35% 110%, rgb(52 211 153 / 0.45), transparent 60%);
+    background-size: 140% 140%;
+    animation: lb-sheen 18s ease-in-out infinite alternate;
+}
+
+.lb-aurora-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: var(--lb-grain);
+    opacity: 0.12;
+    mix-blend-mode: overlay;
+}
+
+.lb-gradient-text {
+    background-image: linear-gradient(100deg, #a5f3fc 0%, #c4b5fd 45%, #f5d0fe 75%, #a7f3d0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.lb-gradient-bar {
+    background-image: linear-gradient(90deg, var(--lb-cyan), var(--lb-violet) 60%, var(--lb-fuchsia));
+}
+
+.lb-glass-dark {
+    background: rgb(255 255 255 / 0.07);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+    backdrop-filter: blur(16px) saturate(140%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lb-aurora-blob,
+    .lb-aurora-panel {
+        animation: none;
+    }
+}
+
+/* ---------------------------------------------------------------------
+ * Panel layout
+ * ------------------------------------------------------------------- */
+
+.fi-body {
+    background-color: #f6f7fb;
+}
+
+.dark .fi-body {
+    background-color: var(--lb-ink);
+}
+
+.fi-layout {
+    position: relative;
+    z-index: 1;
+}
+
+.fi-main-ctn {
+    @apply bg-transparent;
+}
+
+.fi-main {
+    @apply px-6 lg:px-10;
+}
+
+/* Sidebar: frosted glass over the aurora. */
+.fi-sidebar.fi-main-sidebar {
+    background: var(--lb-glass);
+    border-inline-end: 1px solid var(--lb-glass-ring);
+    backdrop-filter: blur(24px) saturate(160%);
+}
+
+.fi-sidebar-header {
+    @apply h-16;
+}
+
+.fi-sidebar-nav {
+    @apply px-3 py-3;
+}
+
+.fi-sidebar-nav-groups {
+    @apply mx-0 gap-y-6;
+}
+
+.fi-sidebar-group {
+    @apply gap-y-0.5;
+}
+
+.fi-sidebar-group-btn {
+    @apply px-3 pt-0 pb-1.5;
+}
+
+.fi-sidebar-group-label {
+    @apply text-[11px] leading-4 font-semibold tracking-[0.08em] text-gray-400 uppercase dark:text-gray-500;
+}
+
+.fi-sidebar-group-items {
+    @apply gap-y-0.5;
+}
+
+.fi-sidebar-item-btn {
+    @apply justify-start gap-x-3 rounded-lg px-3 py-2;
+
+    & > .fi-icon {
+        @apply size-[18px] text-gray-500 dark:text-gray-400;
+    }
+}
+
+.fi-sidebar-item-label {
+    @apply text-sm font-medium text-gray-600 dark:text-gray-300;
+}
+
+.fi-sidebar-item:not(.fi-active) > .fi-sidebar-item-btn {
+    @apply hover:bg-white/70 dark:hover:bg-white/5;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background: var(--lb-glass-strong);
+    box-shadow:
+        0 0 0 1px var(--lb-glass-ring),
+        0 4px 14px -6px rgb(91 33 182 / 0.35);
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset-block: 0.5rem;
+        inset-inline-start: -0.75rem;
+        width: 3px;
+        border-radius: 9999px;
+        background: linear-gradient(180deg, var(--lb-cyan), var(--lb-violet));
+    }
+
+    & > .fi-icon {
+        @apply text-primary-600 dark:text-primary-300;
+    }
+
+    & > .fi-sidebar-item-label {
+        @apply text-gray-950 dark:text-white;
+    }
+}
+
+.fi-sidebar-footer {
+    @apply mx-0 px-3 py-3;
+    border-top: 1px solid var(--lb-glass-ring);
+}
+
+/* Page header */
+.fi-header-heading {
+    @apply text-2xl font-semibold tracking-tight;
+}
+
+/* Glass surfaces */
+.fi-section:not(.fi-section-not-contained),
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat {
+    background: var(--lb-glass);
+    box-shadow: var(--lb-shadow);
+    --tw-ring-color: var(--lb-glass-ring);
+    backdrop-filter: blur(20px) saturate(150%);
+}
+
+.fi-section-header {
+    border-color: var(--lb-glass-ring) !important;
+}
+
+.fi-section-header-heading {
+    @apply text-[15px] font-semibold tracking-tight;
+}
+
+/* ---------------------------------------------------------------------
+ * Login
+ * ------------------------------------------------------------------- */
+
+.lb-auth .fi-simple-main {
+    @apply m-0 w-full max-w-none bg-transparent p-0 shadow-none ring-0;
+}
+
+.lb-auth .fi-simple-header {
+    @apply items-start text-start;
+}
+
+.lb-auth .fi-simple-header .fi-logo {
+    @apply hidden;
+}
+
+.lb-auth .fi-simple-header-heading {
+    @apply text-2xl font-semibold tracking-tight;
+}
