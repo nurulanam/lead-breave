@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\Role;
+use App\Filament\Widgets\PipelineOverview;
 use App\Filament\Widgets\SetupChecklist;
 use App\Filament\Widgets\SystemStatus;
+use App\Models\Lead;
 use App\Settings\ApiSettings;
 use App\Settings\GeneralSettings;
 use Livewire\Livewire;
@@ -60,4 +62,10 @@ it('flags a non-redis queue in the system status', function () {
         ->assertSee('Horizon needs the redis driver.')
         ->assertSee('Not in use')
         ->assertSee('Emails are written to the log, not sent.');
+});
+
+it('counts found leads on the pipeline', function () {
+    Lead::factory()->count(3)->create();
+
+    expect(collect(PipelineOverview::stages())->firstWhere('key', 'found')['count'])->toBe(3);
 });

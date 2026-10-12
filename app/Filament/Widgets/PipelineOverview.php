@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\Permission;
+use App\Models\Lead;
 use Filament\Widgets\Widget;
 
 class PipelineOverview extends Widget
@@ -31,7 +32,7 @@ class PipelineOverview extends Widget
     public static function stages(): array
     {
         return [
-            ['key' => 'found', 'label' => 'Found', 'description' => 'From Google Maps', 'count' => 0],
+            ['key' => 'found', 'label' => 'Found', 'description' => 'From Google Maps', 'count' => Lead::query()->count()],
             ['key' => 'enriched', 'label' => 'Enriched', 'description' => 'Email or socials found', 'count' => 0],
             ['key' => 'audited', 'label' => 'Audited', 'description' => 'Issues confirmed', 'count' => 0],
             ['key' => 'contacted', 'label' => 'Contacted', 'description' => 'First email sent', 'count' => 0],

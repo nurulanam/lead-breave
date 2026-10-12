@@ -12,7 +12,7 @@ The workflow it supports:
 6. Send an automatic follow-up after 2 business days if there is no reply.
 7. Propose a meeting (Zoom, Google Meet or a booking link).
 
-The build plan is in [PHASES.md](PHASES.md) and the original requirements are in [requiments.md](requiments.md). **Phase 0 (foundation) is done**, so the app currently has login, users and roles, settings and the queue setup. Lead features start in Phase 1.
+The build plan is in [PHASES.md](PHASES.md) and the original requirements are in [requiments.md](requiments.md). The plan has 19 phases. **Phases 0–2 are done** (foundation, app shell and design, core data model), so the app has login, users and roles, settings, the queue setup, the Aurora UI, and the database for leads and searches. Search (Phase 3) is next.
 
 ## Stack
 
@@ -74,6 +74,8 @@ In `local` the seeder creates one user per role. The password for each is `passw
 | admin@example.com | admin |
 | researcher@example.com | researcher |
 | sender@example.com | sender |
+
+In `local`, `migrate:fresh --seed` also loads demo data: 5 searches with 1,000 leads spread across the pipeline. To add the demo data without wiping anything, run `php artisan db:seed --class=DemoSeeder`.
 
 In other environments the seeder only creates the roles. Create the first admin with tinker:
 
