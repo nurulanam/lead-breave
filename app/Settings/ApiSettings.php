@@ -9,9 +9,10 @@ use Spatie\LaravelSettings\Settings;
  */
 class ApiSettings extends Settings
 {
-    public ?string $google_places_key;
-
-    public ?string $pagespeed_key;
+    /**
+     * One Google Cloud key for Places API (New), Geocoding API and PageSpeed Insights API.
+     */
+    public ?string $google_api_key;
 
     public ?string $anthropic_key;
 
@@ -33,7 +34,7 @@ class ApiSettings extends Settings
      */
     public static function keys(): array
     {
-        return ['google_places_key', 'pagespeed_key', 'anthropic_key'];
+        return ['google_api_key', 'anthropic_key'];
     }
 
     public function has(string $key): bool

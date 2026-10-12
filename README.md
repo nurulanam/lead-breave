@@ -98,12 +98,14 @@ Roles and permissions are defined in [app/Enums/Role.php](app/Enums/Role.php) an
 Admins manage settings in the panel under **Settings**:
 
 - **General**: company name, sender name and email, postal address (required in outreach footers), booking link and timezone.
-- **API keys**: Google Places, PageSpeed Insights and Anthropic. The keys are encrypted in the database and are never sent back to the browser. A blank field keeps the saved key.
+- **API keys**: the keys are encrypted in the database and are never sent back to the browser. A blank field keeps the saved key.
+  - **Google API key**: one Google Cloud key for lead search, geocoding and speed tests. In the Google Cloud console, enable **Places API (New)**, **Geocoding API** and **PageSpeed Insights API**, then restrict the key to those three APIs.
+  - **Anthropic API key** (optional): used by "Draft with AI" on the audit screen.
 
 In code, read them from the settings classes:
 
 ```php
-app(App\Settings\ApiSettings::class)->google_places_key;
+app(App\Settings\ApiSettings::class)->google_api_key;
 ```
 
 To add a setting, add a property to the class in [app/Settings](app/Settings) and a settings migration in [database/settings](database/settings).

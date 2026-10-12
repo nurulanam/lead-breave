@@ -31,9 +31,14 @@ class ManageApiKeys extends SettingsPage
 
     /** @var array<string, string> */
     private const LABELS = [
-        'google_places_key' => 'Google Places API key',
-        'pagespeed_key' => 'PageSpeed Insights API key',
+        'google_api_key' => 'Google API key',
         'anthropic_key' => 'Anthropic (Claude) API key',
+    ];
+
+    /** @var array<string, string> */
+    private const HINTS = [
+        'google_api_key' => 'One key for lead search, geocoding and speed tests. In Google Cloud, enable Places API (New), Geocoding API and PageSpeed Insights API, then restrict the key to those three APIs.',
+        'anthropic_key' => 'Optional. Used by "Draft with AI" on the audit screen.',
     ];
 
     public static function canAccess(): bool
@@ -98,7 +103,8 @@ class ManageApiKeys extends SettingsPage
                             ->password()
                             ->autocomplete('new-password')
                             ->maxLength(255)
-                            ->placeholder($settings->has($key) ? 'Saved. Leave blank to keep it.' : 'Not set'),
+                            ->placeholder($settings->has($key) ? 'Saved. Leave blank to keep it.' : 'Not set')
+                            ->helperText(self::HINTS[$key]),
                         Checkbox::make("clear_{$key}")
                             ->label('Remove the saved key')
                             ->visible($settings->has($key)),

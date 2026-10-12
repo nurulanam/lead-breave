@@ -36,15 +36,9 @@ class SetupChecklist extends Widget
 
         return [
             [
-                'label' => 'Connect Google Places',
-                'hint' => 'Needed to search Google Maps.',
-                'done' => $api->has('google_places_key'),
-                'url' => ManageApiKeys::getUrl(),
-            ],
-            [
-                'label' => 'Connect PageSpeed Insights',
-                'hint' => 'Powers the speed audit button.',
-                'done' => $api->has('pagespeed_key'),
+                'label' => 'Add your Google API key',
+                'hint' => 'Powers Maps search, geocoding and PageSpeed.',
+                'done' => $api->has('google_api_key'),
                 'url' => ManageApiKeys::getUrl(),
             ],
             [

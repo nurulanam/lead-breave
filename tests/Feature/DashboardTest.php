@@ -22,7 +22,7 @@ it('shows admins the pipeline, setup checklist and system status', function () {
         ->assertOk()
         ->assertSee('Reply rate')
         ->assertSee('Leads by stage')
-        ->assertSee('of 6 complete')
+        ->assertSee('of 5 complete')
         ->assertSeeLivewire(SystemStatus::class);
 });
 
@@ -31,17 +31,17 @@ it('hides admin widgets from other roles', function (Role $role) {
         ->get('/admin')
         ->assertOk()
         ->assertSee('Leads by stage')
-        ->assertDontSee('of 6 complete')
+        ->assertDontSee('of 5 complete')
         ->assertDontSeeLivewire(SystemStatus::class);
 })->with([Role::Researcher, Role::Sender]);
 
 it('tracks setup progress from the saved settings', function () {
     userWithRole(Role::Admin);
 
-    expect(SetupChecklist::progress())->toBe(['done' => 0, 'total' => 6]);
+    expect(SetupChecklist::progress())->toBe(['done' => 0, 'total' => 5]);
 
     $api = app(ApiSettings::class);
-    $api->google_places_key = 'places-key';
+    $api->google_api_key = 'google-key';
     $api->save();
 
     $general = app(GeneralSettings::class);
@@ -50,7 +50,7 @@ it('tracks setup progress from the saved settings', function () {
 
     userWithRole(Role::Sender);
 
-    expect(SetupChecklist::progress())->toBe(['done' => 3, 'total' => 6]);
+    expect(SetupChecklist::progress())->toBe(['done' => 3, 'total' => 5]);
 });
 
 it('flags a non-redis queue in the system status', function () {

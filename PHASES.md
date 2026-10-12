@@ -74,7 +74,7 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 - [x] Queues: `search`, `enrich`, `pagespeed`, `mail`, `default`, each with its own concurrency in Horizon.
 - [x] CI with GitHub Actions: Pint, Larastan, Pest (plus an asset build).
 
-> Notes: Filament **5** was installed (it replaced 4 as the current major). Redis uses `predis`, so no PHP extension is needed. Telescope only loads in `local`. API keys are managed on a write-only page (Settings > API keys). Horizon needs Redis, so run it through Sail.
+> Notes: Filament **5** was installed (it replaced 4 as the current major). Redis uses `predis`, so no PHP extension is needed. Telescope only loads in `local`. API keys are managed on a write-only page (Settings > API keys). One Google key covers Places API (New), Geocoding and PageSpeed Insights. Horizon needs Redis, so run it through Sail.
 
 ## Phase 1: App shell and design system
 
@@ -136,8 +136,8 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 
 **Backend**
 
-- [ ] `PlacesClient`: Places API (New) `searchText` with a strict field mask (only the fields we store), retries with backoff on 429/5xx, and the key sent as a header. Ported from `Google_Places_Provider.php`.
-- [ ] Geocoding: ZIP/location to a centre point and bounds, cached for 30 days. **Its cost is logged** in `api_calls`.
+- [ ] `PlacesClient`: Places API (New) `searchText` with a strict field mask (only the fields we store), retries with backoff on 429/5xx, and the shared Google key (`ApiSettings::$google_api_key`) sent in the `X-Goog-Api-Key` header. Ported from `Google_Places_Provider.php`.
+- [ ] Geocoding (Geocoding API, same Google key): ZIP/location to a centre point and bounds, cached for 30 days. **Its cost is logged** in `api_calls`. This API only accepts the key as a `key` query parameter, so request URLs are redacted before they are logged or reported.
 - [ ] Grid tiling: split the bounds into cells sized for the industry's density (dense for "restaurant", coarse for "roofer"). One `search_tiles` row per cell. Cells that hit the 60-result cap are split again, up to a depth limit.
 - [ ] `RunSearchTile` job on the `search` queue: one page per run, a `Cache::lock` per tile and page (so a page is never fetched or billed twice), and the next page as a new job.
 - [ ] `IngestPlaces`: dedupe each page in **one batched query** (place_id, then domain, then E.164 phone). New leads are created; existing ones are linked through `lead_search` and their Places data refreshed.
@@ -213,6 +213,7 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 **Table:** `pagespeed_runs` (`lead_id`, `strategy`: `mobile`/`desktop`, `status`, `performance`, `accessibility`, `best_practices`, `seo`, `lcp_ms`, `fcp_ms`, `tbt_ms`, `cls`, `si_ms`, `screenshot_path`, `error`, `requested_by`, `ran_at`).
 
 - [ ] **Run PageSpeed** button on the lead page and as a bulk action. It queues mobile and desktop runs on the `pagespeed` queue; **no Lighthouse call runs inside the web request**.
+- [ ] Calls use the shared Google key (`google_api_key`), the same one as search and geocoding.
 - [ ] One Redis rate limiter for the PSI API (for example 4 per minute), shared by all workers. A queued run waits for its slot; it never fails because of the limit.
 - [ ] The final screenshot from the PSI response is stored on a **private disk** and served through signed, expiring URLs.
 - [ ] UI: a pending state while queued or running, then PSI-style gauges, Core Web Vitals with Google's pass/fail colours, the screenshot, and run history with trends.
@@ -424,7 +425,7 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 | Most lead statuses are never set | A state machine with an event per transition (done) | 2 |
 | CSV formula injection | Escape `= + - @` at the start of cells | 16 |
 | Public, predictable screenshot URLs | Private disk with signed URLs | 6 |
-| API key in the URL query string | Sent in a header | 3, 9 |
+| API key in the URL query string | Sent in a header where the API allows it; redacted from logs where it does not (Geocoding) | 3, 6, 9 |
 | Cap/duplicate checks can race | Transaction with a row lock | 11 |
 | Unsubscribe breaks if the email changes | Token tied to the message | 11 |
 | Follow-ups, replies, socials, CSV import, pipeline never built | New phases | 4, 5, 12, 13, 15 |
@@ -438,6 +439,7 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 | Database | MySQL 8.4 (Sail); SQLite in tests | ✅ Decided |
 | Queue / cache | Redis + Horizon, `predis` client | ✅ Decided |
 | Users | Multi-user with roles: admin, researcher, sender | ✅ Decided |
+| Google APIs | One Google Cloud key for Places API (New), Geocoding API and PageSpeed Insights API | ✅ Decided |
 | Mail provider | Postmark or Amazon SES, on a separate sending domain | Decide before Phase 11 |
 | Reply detection | Provider inbound webhook, IMAP as fallback | Decide before Phase 13 |
 | Booking tool | Calendly or Cal.com (webhook support) | Decide before Phase 14 |
