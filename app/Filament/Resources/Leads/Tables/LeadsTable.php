@@ -6,6 +6,7 @@ use App\Enums\LeadSource;
 use App\Enums\LeadStatus;
 use App\Filament\Resources\Leads\LeadActions;
 use App\Models\Lead;
+use App\Services\Website\CheckProgress;
 use App\Support\Countries;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -29,6 +30,7 @@ class LeadsTable
             ->searchPlaceholder('Search name, website, city, phone or email')
             ->splitSearchTerms(false)
             ->persistFiltersInSession()
+            ->poll(fn (): ?string => CheckProgress::recentlyActive() || Lead::query()->where('status', LeadStatus::Enriching)->exists() ? '2s' : null)
             ->persistSearchInSession()
             ->columns([
                 TextColumn::make('name')
@@ -76,6 +78,9 @@ class LeadsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
                     ->badge()
+                    ->icon(fn (LeadStatus $state): ?string => $state === LeadStatus::Enriching ? 'heroicon-m-arrow-path' : null)
+                    ->extraAttributes(fn (Lead $record): array => $record->status === LeadStatus::Enriching ? ['class' => 'lb-spin-icon'] : [])
+                    ->description(fn (Lead $record): ?string => self::progressLine($record))
                     ->sortable(),
                 TextColumn::make('owner.name')
                     ->label('Owner')
@@ -144,6 +149,20 @@ class LeadsTable
             ->emptyStateIcon('heroicon-o-building-storefront')
             ->emptyStateHeading('No leads here')
             ->emptyStateDescription('Run a search, add a lead by hand, or import a CSV.');
+    }
+
+    /**
+     * "45% · Reading contact page 2 of 3" while a website check is queued or running.
+     */
+    public static function progressLine(Lead $lead): ?string
+    {
+        $progress = CheckProgress::get($lead->id);
+
+        return match ($progress['state'] ?? null) {
+            CheckProgress::QUEUED => $progress['step'] === CheckProgress::WAITING_FOR_WORKER ? 'Website check queued' : $progress['step'],
+            CheckProgress::RUNNING => $progress['percent'].'% · '.$progress['step'],
+            default => null,
+        };
     }
 
     /**

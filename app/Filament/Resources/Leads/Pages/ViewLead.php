@@ -13,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Livewire\Attributes\On;
 
 /**
  * @property Lead $record
@@ -20,6 +21,18 @@ use Illuminate\Contracts\Support\Htmlable;
 class ViewLead extends ViewRecord
 {
     protected static string $resource = LeadResource::class;
+
+    protected string $view = 'filament.resources.leads.pages.view-lead';
+
+    /**
+     * A website check finished: reload the lead so the status, contact details
+     * and tab counts are current. Each tab refreshes itself on the same event.
+     */
+    #[On('lead-updated')]
+    public function refreshLead(): void
+    {
+        $this->record->refresh();
+    }
 
     public function getTitle(): string|Htmlable
     {

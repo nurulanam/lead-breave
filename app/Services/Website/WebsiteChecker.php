@@ -29,16 +29,24 @@ class WebsiteChecker
         private BotProtectionDetector $botProtection,
     ) {}
 
+    /** @var (callable(int, string): void)|null */
+    private $reporter = null;
+
     /**
      * @param  list<WebsiteCheckType>  $types
+     * @param  (callable(int $percent, string $step): void)|null  $reporter  told about each step, for live progress
      */
-    public function check(Lead $lead, array $types): void
+    public function check(Lead $lead, array $types, ?callable $reporter = null): void
     {
+        $this->reporter = $reporter;
+
         if (blank($lead->website)) {
             $this->failAll($lead, $types, 'This lead has no website.', ['reachable' => false, 'no_website' => true]);
 
             return;
         }
+
+        $this->report(10, 'Connecting to '.Domain::fromUrl($lead->website));
 
         try {
             $home = $this->crawler->home((string) $lead->website);
@@ -62,7 +70,13 @@ class WebsiteChecker
             default => 'The home page is not a web page.',
         };
 
+        $this->report(25, 'Reading the home page');
+
         foreach ($types as $type) {
+            if ($type !== WebsiteCheckType::Crawl) {
+                $this->report(88, 'Checking '.mb_strtolower($type->label()));
+            }
+
             match ($type) {
                 WebsiteCheckType::Crawl => $this->crawl($lead, $home, $parked, $blockedBy),
                 WebsiteCheckType::Ssl => $this->record($lead, $type, WebsiteCheck::STATUS_OK, $this->ssl((string) $lead->website, $home)),
@@ -81,8 +95,13 @@ class WebsiteChecker
         $pages = [new CrawledPage('home', $home)];
 
         if ($parked === null && $blockedBy === null) {
-            $pages = [...$pages, ...$this->crawler->contactPages($home)];
+            $this->report(30, 'Looking for contact pages');
+            $pages = [...$pages, ...$this->crawler->contactPages($home, function (int $current, int $total): void {
+                $this->report(30 + (int) round(45 * $current / max(1, $total)), "Reading contact page {$current} of {$total}");
+            })];
         }
+
+        $this->report(80, 'Finding emails and social profiles');
 
         $siteDomain = (string) Domain::fromUrl($home->finalUrl);
         $html = [];
@@ -136,6 +155,13 @@ class WebsiteChecker
             'certificate_error' => $home->sslError,
             'upgraded_to_https' => ! str_starts_with(strtolower($website), 'https://') && $home->isHttps(),
         ];
+    }
+
+    private function report(int $percent, string $step): void
+    {
+        if ($this->reporter !== null) {
+            ($this->reporter)($percent, $step);
+        }
     }
 
     /**

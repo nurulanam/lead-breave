@@ -47,7 +47,7 @@ it('queues a full check from the tab', function () {
     websiteTab($lead)
         ->callAction(TestAction::make('checkAll')->table())
         ->assertNotified('Website check queued')
-        ->assertSet('waitingForResults', true);
+        ->assertDispatched('website-check-queued');
 
     Queue::assertPushed(CheckWebsite::class, fn (CheckWebsite $job) => $job->leadId === $lead->id && $job->types === []);
 });

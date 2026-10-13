@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Leads\RelationManagers;
 
 use App\Enums\DataSource;
+use App\Filament\Resources\Leads\RelationManagers\Concerns\RefreshesWhenLeadUpdates;
 use App\Models\Lead;
 use App\Models\LeadEmail;
 use Filament\Actions\Action;
@@ -26,6 +27,8 @@ use Illuminate\Validation\Rules\Unique;
  */
 class EmailsRelationManager extends RelationManager
 {
+    use RefreshesWhenLeadUpdates;
+
     protected static string $relationship = 'emails';
 
     /**

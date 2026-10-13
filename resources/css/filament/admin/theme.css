@@ -3,6 +3,8 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/livewire/**/*';
+@source '../../../../app/Livewire/**/*';
 
 /*
  * LeadBreave "Aurora" theme.
@@ -359,4 +361,21 @@
 /* Full-colour tiles, as in LeadMap; only dimmed slightly in dark mode. */
 .dark .lb-map .leaflet-tile-pane {
     filter: brightness(0.8) contrast(1.05) saturate(0.9);
+}
+
+/* Spinning icon on the "Enriching" status badge. */
+@keyframes lb-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.lb-spin-icon .fi-badge .fi-icon {
+    animation: lb-spin 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lb-spin-icon .fi-badge .fi-icon {
+        animation: none;
+    }
 }

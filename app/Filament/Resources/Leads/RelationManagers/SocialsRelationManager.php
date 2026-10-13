@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Leads\RelationManagers;
 
 use App\Enums\DataSource;
 use App\Enums\SocialPlatform;
+use App\Filament\Resources\Leads\RelationManagers\Concerns\RefreshesWhenLeadUpdates;
 use App\Models\Lead;
 use App\Models\LeadSocial;
 use App\Support\Domain;
@@ -22,6 +23,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class SocialsRelationManager extends RelationManager
 {
+    use RefreshesWhenLeadUpdates;
+
     protected static string $relationship = 'socials';
 
     protected static ?string $title = 'Social links';

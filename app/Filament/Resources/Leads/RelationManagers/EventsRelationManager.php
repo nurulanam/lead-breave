@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Leads\RelationManagers;
 
+use App\Filament\Resources\Leads\RelationManagers\Concerns\RefreshesWhenLeadUpdates;
 use App\Models\LeadEvent;
 use BackedEnum;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class EventsRelationManager extends RelationManager
 {
+    use RefreshesWhenLeadUpdates;
+
     protected static string $relationship = 'events';
 
     protected static ?string $title = 'Activity';

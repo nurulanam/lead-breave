@@ -61,9 +61,10 @@ class WebsiteCrawler
     /**
      * The contact-like pages linked from (or commonly found next to) the home page.
      *
+     * @param  (callable(int $current, int $total): void)|null  $onPage  told before each page is read
      * @return list<CrawledPage>
      */
-    public function contactPages(FetchResult $home): array
+    public function contactPages(FetchResult $home, ?callable $onPage = null): array
     {
         if (! $home->ok() || ! $home->isHtml() || $this->fetcher->outOfTime()) {
             return [];
@@ -71,10 +72,17 @@ class WebsiteCrawler
 
         $robots = $this->robots($home->finalUrl);
         $pages = [];
+        $links = $this->contactLinks($home->body, $home->finalUrl);
+        $total = min(count($links), self::MAX_EXTRA_PAGES);
+        $current = 0;
 
-        foreach ($this->contactLinks($home->body, $home->finalUrl) as $url => $kind) {
+        foreach ($links as $url => $kind) {
             if (count($pages) >= self::MAX_EXTRA_PAGES || $this->fetcher->outOfTime()) {
                 break;
+            }
+
+            if ($onPage !== null) {
+                $onPage(++$current, $total);
             }
 
             if (! $robots->allows((string) (parse_url($url, PHP_URL_PATH) ?: '/'))) {

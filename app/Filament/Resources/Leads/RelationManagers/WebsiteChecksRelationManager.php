@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Leads\RelationManagers;
 
-use App\Enums\LeadStatus;
+use App\Filament\Resources\Leads\RelationManagers\Concerns\RefreshesWhenLeadUpdates;
 use App\Jobs\CheckWebsite;
 use App\Models\Lead;
 use App\Models\WebsiteCheck;
@@ -24,14 +24,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WebsiteChecksRelationManager extends RelationManager
 {
+    use RefreshesWhenLeadUpdates;
+
     protected static string $relationship = 'websiteChecks';
 
     protected static ?string $title = 'Website';
 
     protected static string|BackedEnum|null $icon = Heroicon::OutlinedGlobeAlt;
-
-    /** Set after queuing a check, so the cards refresh until results arrive. */
-    public bool $waitingForResults = false;
 
     public function isReadOnly(): bool
     {
@@ -57,7 +56,6 @@ class WebsiteChecksRelationManager extends RelationManager
                 "case type when 'crawl' then 1 when 'ssl' then 2 when 'seo' then 3 else 4 end"
             ))
             ->paginated(false)
-            ->poll(fn (): ?string => $this->waitingForResults || $this->lead()->status === LeadStatus::Enriching ? '4s' : null)
             ->contentGrid(['md' => 2])
             ->columns([
                 Stack::make([
@@ -71,9 +69,9 @@ class WebsiteChecksRelationManager extends RelationManager
                     ->visible(fn (): bool => filled($this->lead()->website))
                     ->action(function (): void {
                         CheckWebsite::forLead($this->lead());
-                        $this->waitingForResults = true;
+                        $this->dispatch('website-check-queued');
 
-                        Notification::make()->title('Website check queued')->body('Results appear here in about a minute.')->success()->send();
+                        Notification::make()->title('Website check queued')->body('Progress shows at the top of the page.')->success()->send();
                     }),
             ])
             ->recordActions([
@@ -84,7 +82,7 @@ class WebsiteChecksRelationManager extends RelationManager
                     ->size('sm')
                     ->action(function (WebsiteCheck $record): void {
                         CheckWebsite::forLead($this->lead(), $record->type);
-                        $this->waitingForResults = true;
+                        $this->dispatch('website-check-queued');
 
                         Notification::make()->title($record->type->label().' check queued')->success()->send();
                     }),
