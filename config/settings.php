@@ -2,6 +2,7 @@
 
 use App\Settings\ApiSettings;
 use App\Settings\GeneralSettings;
+use App\Settings\SearchSettings;
 use Spatie\LaravelSettings\SettingsCasts\DateTimeInterfaceCast;
 use Spatie\LaravelSettings\SettingsCasts\DateTimeZoneCast;
 use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
@@ -16,6 +17,7 @@ return [
     'settings' => [
         GeneralSettings::class,
         ApiSettings::class,
+        SearchSettings::class,
     ],
 
     /*

@@ -2,12 +2,15 @@
 
 namespace App\Enums;
 
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
+
 /**
  * Where a lead is in the workflow. Transitions are only allowed along the
  * edges in transitions(); use Lead::transitionTo() rather than setting the
  * column directly, so every change is checked and logged.
  */
-enum LeadStatus: string
+enum LeadStatus: string implements HasColor, HasLabel
 {
     case New = 'new';
     case Enriching = 'enriching';
@@ -70,6 +73,25 @@ enum LeadStatus: string
             self::Bounced => [self::NeedsInfo],
             self::NotAFit, self::Lost => [self::New],
             self::Won, self::Unsubscribed => [],
+        };
+    }
+
+    public function getLabel(): string
+    {
+        return $this->label();
+    }
+
+    public function getColor(): string
+    {
+        return match ($this) {
+            self::New, self::Enriching => 'gray',
+            self::Enriched, self::Triaged => 'info',
+            self::NeedsInfo => 'warning',
+            self::Audited, self::Ready => 'primary',
+            self::Contacted, self::FollowedUp => 'info',
+            self::Replied, self::MeetingBooked, self::Won => 'success',
+            self::NotAFit, self::Lost, self::Unsubscribed => 'gray',
+            self::Bounced => 'danger',
         };
     }
 

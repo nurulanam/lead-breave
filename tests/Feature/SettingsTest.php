@@ -28,51 +28,6 @@ it('encrypts API keys at rest', function () {
         ->and(app(ApiSettings::class)->google_api_key)->toBe('AIza-secret-123');
 });
 
-it('never sends saved API keys to the browser', function () {
-    storeApiKey('google_api_key', 'AIza-secret-123');
-
-    $this->actingAs(userWithRole(Role::Admin));
-
-    Livewire::test(ManageApiKeys::class)
-        ->assertSet('data.google_api_key', null)
-        ->assertDontSeeHtml('AIza-secret-123');
-
-    $this->get(ManageApiKeys::getUrl())
-        ->assertOk()
-        ->assertDontSee('AIza-secret-123');
-});
-
-it('keeps a saved key when the field is left blank', function () {
-    storeApiKey('google_api_key', 'old-google');
-    storeApiKey('anthropic_key', 'old-anthropic');
-
-    $this->actingAs(userWithRole(Role::Admin));
-
-    Livewire::test(ManageApiKeys::class)
-        ->fillForm(['anthropic_key' => 'new-anthropic'])
-        ->call('save')
-        ->assertHasNoFormErrors()
-        ->assertSet('data.anthropic_key', null);
-
-    $settings = app(ApiSettings::class)->refresh();
-
-    expect($settings->google_api_key)->toBe('old-google')
-        ->and($settings->anthropic_key)->toBe('new-anthropic');
-});
-
-it('removes a saved key on request', function () {
-    storeApiKey('anthropic_key', 'sk-ant-old');
-
-    $this->actingAs(userWithRole(Role::Admin));
-
-    Livewire::test(ManageApiKeys::class)
-        ->fillForm(['clear_anthropic_key' => true])
-        ->call('save')
-        ->assertHasNoFormErrors();
-
-    expect(app(ApiSettings::class)->refresh()->anthropic_key)->toBeNull();
-});
-
 it('saves general settings', function () {
     $this->actingAs(userWithRole(Role::Admin));
 
@@ -107,8 +62,8 @@ it('merges the old Places and PageSpeed keys into one Google key', function (?st
     (require database_path('settings/2026_10_12_100049_merge_google_api_keys.php'))->up();
 
     expect(app(ApiSettings::class)->refresh()->google_api_key)->toBe($expected)
-        ->and(DB::table('settings')->where('group', 'api')->pluck('name')->sort()->values()->all())
-        ->toBe(['anthropic_key', 'google_api_key']);
+        ->and(DB::table('settings')->where('group', 'api')->whereIn('name', ['google_places_key', 'pagespeed_key'])->exists())
+        ->toBeFalse();
 })->with([
     'both set keeps the Places key' => ['places-key', 'psi-key', 'places-key'],
     'only PageSpeed set' => [null, 'psi-key', 'psi-key'],

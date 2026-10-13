@@ -2,7 +2,7 @@
 
 Port of the **LeadMap** WordPress plugin (`~/Sites/gmap-scrapper/leadmap`, v0.7.0) to a standalone Laravel application. We keep what works, fix the known weaknesses, and build the parts of the workflow that were never finished.
 
-> **Status:** Phases 0–2 are done. Phases 3 onward are a plan: review and correct them before each one starts.
+> **Status:** Phases 0–3 are done. Phases 4 onward are a plan: review and correct them before each one starts.
 
 ---
 
@@ -23,8 +23,8 @@ Port of the **LeadMap** WordPress plugin (`~/Sites/gmap-scrapper/leadmap`, v0.7.
 | 0 | [Foundation](#phase-0-foundation) | – | Auth, roles, settings, queues, CI | S | ✅ Done |
 | 1 | [App shell and design system](#phase-1-app-shell-and-design-system) | – | Aurora theme, login, dashboard shell | S | ✅ Done |
 | 2 | [Core data model](#phase-2-core-data-model) | – | Leads, searches, emails, socials, events | M | ✅ Done |
-| 3 | [Search](#phase-3-search-google-maps-discovery) | 1 | Google Maps search with grid tiling | L | Next |
-| 4 | [Leads workspace](#phase-4-leads-workspace) | 2 | Lead table, lead page, manual entry, CSV import | M | |
+| 3 | [Search](#phase-3-search-google-maps-discovery) | 1 | Google Maps search with grid tiling | L | ✅ Done |
+| 4 | [Leads workspace](#phase-4-leads-workspace) | 2 | Lead table, lead page, manual entry, CSV import | M | Next |
 | 5 | [Website check](#phase-5-website-check) | 2 | Crawl: emails, socials, YouTube, tech, SEO | L | |
 | 6 | [PageSpeed](#phase-6-pagespeed) | 3 | On-demand mobile/desktop Lighthouse runs | M | |
 | 7 | [Scoring](#phase-7-scoring) | 3 | Opportunity score and fit score | S | |
@@ -132,26 +132,30 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 
 ## Phase 3: Search (Google Maps discovery)
 
+**Status:** ✅ Done (2026-10-13)
+
 **Goal:** workflow step 1. Find every business of a type in an area, fast, without paying twice.
+
+> Notes: Text Search only accepts a **rectangle** as a hard location limit, so cells are squares (`radius_m` on a tile is half the side). Splitting stops at depth 2 or cells under 250 m. Spend limits and estimate prices are admin settings (Settings > Search), not config. The timezone comes from the US state (`UsTimezones`), not from lat/lng; non-US leads get none for now. Dedupe ports LeadMap's rule that shared hosts (facebook.com, wixsite.com…) never count as a domain match. Existing leads are refreshed, but hand-entered phone and website values are never overwritten. Map tiles are OpenStreetMap's public tiles (fine for an internal tool; switch to a keyed provider if traffic grows). Not done here: dispatching the website check for new leads moves to Phase 5, which builds that job.
 
 **Backend**
 
-- [ ] `PlacesClient`: Places API (New) `searchText` with a strict field mask (only the fields we store), retries with backoff on 429/5xx, and the shared Google key (`ApiSettings::$google_api_key`) sent in the `X-Goog-Api-Key` header. Ported from `Google_Places_Provider.php`.
-- [ ] Geocoding (Geocoding API, same Google key): ZIP/location to a centre point and bounds, cached for 30 days. **Its cost is logged** in `api_calls`. This API only accepts the key as a `key` query parameter, so request URLs are redacted before they are logged or reported.
-- [ ] Grid tiling: split the bounds into cells sized for the industry's density (dense for "restaurant", coarse for "roofer"). One `search_tiles` row per cell. Cells that hit the 60-result cap are split again, up to a depth limit.
-- [ ] `RunSearchTile` job on the `search` queue: one page per run, a `Cache::lock` per tile and page (so a page is never fetched or billed twice), and the next page as a new job.
-- [ ] `IngestPlaces`: dedupe each page in **one batched query** (place_id, then domain, then E.164 phone). New leads are created; existing ones are linked through `lead_search` and their Places data refreshed.
-- [ ] Phone normalization with `libphonenumber` (`propaganistas/laravel-phone`), and the timezone derived from lat/lng.
-- [ ] Cost guard: a per-search cap and a monthly cap, counted from `api_calls`. A search that hits a cap stops cleanly with `stop_reason`.
-- [ ] Re-run: resets the counters and tiles, and keeps the existing lead links.
-- [ ] Each new lead dispatches the website check (Phase 5) when it has a website.
+- [x] `PlacesClient`: Places API (New) `searchText` with a strict field mask (only the fields we store), retries with backoff on 429/5xx, and the shared Google key (`ApiSettings::$google_api_key`) sent in the `X-Goog-Api-Key` header. Ported from `Google_Places_Provider.php`.
+- [x] Geocoding (Geocoding API, same Google key): ZIP/location to a centre point and bounds, cached for 30 days. **Its cost is logged** in `api_calls`. This API only accepts the key as a `key` query parameter, so request URLs are redacted before they are logged or reported.
+- [x] Grid tiling: split the bounds into cells sized for the industry's density (dense for "restaurant", coarse for "roofer"). One `search_tiles` row per cell. Cells that hit the 60-result cap are split again, up to a depth limit.
+- [x] `RunSearchTile` job on the `search` queue: one page per run, a `Cache::lock` per tile and page (so a page is never fetched or billed twice), and the next page as a new job.
+- [x] `IngestPlaces`: dedupe each page in **one batched query** (place_id, then domain, then E.164 phone). New leads are created; existing ones are linked through `lead_search` and their Places data refreshed.
+- [x] Phone normalization with `libphonenumber` (`propaganistas/laravel-phone`), and the timezone derived from the US state.
+- [x] Cost guard: a per-search cap and a monthly cap, counted from `api_calls`. A search that hits a cap stops cleanly with `stop_reason`.
+- [x] Re-run: resets the counters and tiles, and keeps the existing lead links.
+- [ ] Each new lead dispatches the website check when it has a website. *(Moved to Phase 5, which builds the job.)*
 
 **UI**
 
-- [ ] **New search** form: industry (with suggestions), ZIP or city, radius, and tiling mode, plus an estimated cost shown before running.
-- [ ] Map preview (Leaflet) with the search area and the tile grid.
-- [ ] **Searches** list: status, progress bar, results, new vs linked leads, cost, and duration.
-- [ ] **Search detail** page: a live progress map (tiles colour in as they finish), polled with Livewire, and the leads table filtered to this search.
+- [x] **New search** form: industry (with suggestions), ZIP or city, radius, and tiling mode, plus an estimated cost shown before running.
+- [x] Map preview (Leaflet) with the search area and the tile grid.
+- [x] **Searches** list: status, progress bar, results, new vs linked leads, cost, and duration.
+- [x] **Search detail** page: a live progress map (tiles colour in as they finish), polled with Livewire, and the leads table filtered to this search.
 
 **Tests:** tile splitting, dedupe order, lock prevents double fetch, the cost cap stops a run, re-run resets counters.
 
@@ -186,7 +190,7 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 
 - [ ] Port `Website_Crawler`, `Http_Fetcher`, `Robots` and `Url_Guard` to Laravel's HTTP client: SSRF guard (blocks private IPs, re-checked after every redirect), robots.txt, a 2 MB cap, a 10-second timeout, and a per-host delay.
 - [ ] Page discovery: home page plus up to four contact, about and team pages.
-- [ ] `CheckWebsite` job on the `enrich` queue, with a per-domain rate limiter.
+- [ ] `CheckWebsite` job on the `enrich` queue, with a per-domain rate limiter. Dispatched for every new lead with a website (from `PlaceIngestor`, manual entry and CSV import).
 - [ ] Broken SSL: retry without verification, record "SSL broken" as a finding, and do not mark the site unreachable.
 - [ ] Parked and dead domains are detected and flagged, not crawled further.
 

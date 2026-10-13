@@ -36,6 +36,22 @@ class ApiCall extends Model
     }
 
     /**
+     * Record one call in the ledger.
+     */
+    public static function record(string $provider, string $endpoint, ?int $status, int $durationMs, int $costUnits = 1, ?Model $related = null): self
+    {
+        return static::query()->create([
+            'provider' => $provider,
+            'endpoint' => $endpoint,
+            'status' => $status,
+            'duration_ms' => $durationMs,
+            'cost_units' => $costUnits,
+            'related_type' => $related?->getMorphClass(),
+            'related_id' => $related?->getKey(),
+        ]);
+    }
+
+    /**
      * @param  Builder<ApiCall>  $query
      */
     #[Scope]

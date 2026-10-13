@@ -1,4 +1,5 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import 'leaflet/dist/leaflet.css';
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
@@ -340,4 +341,22 @@
 
 .lb-auth .fi-simple-header-heading {
     @apply text-2xl font-semibold tracking-tight;
+}
+
+/* ---------------------------------------------------------------------
+ * Search map
+ * ------------------------------------------------------------------- */
+
+.lb-map .leaflet-container {
+    font-family: inherit;
+    background: transparent;
+}
+
+.lb-map .leaflet-control-attribution {
+    font-size: 10px;
+}
+
+/* Full-colour tiles, as in LeadMap; only dimmed slightly in dark mode. */
+.dark .lb-map .leaflet-tile-pane {
+    filter: brightness(0.8) contrast(1.05) saturate(0.9);
 }

@@ -12,7 +12,7 @@ The workflow it supports:
 6. Send an automatic follow-up after 2 business days if there is no reply.
 7. Propose a meeting (Zoom, Google Meet or a booking link).
 
-The build plan is in [PHASES.md](PHASES.md) and the original requirements are in [requiments.md](requiments.md). The plan has 19 phases. **Phases 0–2 are done** (foundation, app shell and design, core data model), so the app has login, users and roles, settings, the queue setup, the Aurora UI, and the database for leads and searches. Search (Phase 3) is next.
+The build plan is in [PHASES.md](PHASES.md) and the original requirements are in [requiments.md](requiments.md). The plan has 19 phases. **Phases 0–3 are done** (foundation, app shell and design, core data model, Google Maps search), so you can log in, run a search by trade and ZIP code, and watch the leads arrive. The leads workspace (Phase 4) is next.
 
 ## Stack
 
@@ -98,15 +98,11 @@ Roles and permissions are defined in [app/Enums/Role.php](app/Enums/Role.php) an
 Admins manage settings in the panel under **Settings**:
 
 - **General**: company name, sender name and email, postal address (required in outreach footers), booking link and timezone.
-- **API keys**: the keys are encrypted in the database and are never sent back to the browser. A blank field keeps the saved key.
-  - **Google API key**: one Google Cloud key for lead search, geocoding and speed tests. In the Google Cloud console, enable **Places API (New)**, **Geocoding API** and **PageSpeed Insights API**, then restrict the key to those three APIs.
+- **API keys**: one card per service, showing its status, the masked key (last four characters only), who saved it and when, and this month's Google usage. Keys are encrypted in the database and never sent back to the browser.
+  - **Google API key**: one Google Cloud key for lead search, geocoding and speed tests. In the Google Cloud console, enable **Places API (New)**, **Geocoding API** and **PageSpeed Insights API**, then restrict the key to those three APIs. The card has a step-by-step guide.
   - **Anthropic API key** (optional): used by "Draft with AI" on the audit screen.
-
-In code, read them from the settings classes:
-
-```php
-app(App\Settings\ApiSettings::class)->google_api_key;
-```
+  - Each key is checked for the right format, then tested against every API it needs as soon as it is saved. **Test connection** re-runs the test. The tests use free calls, apart from one geocode that falls within Google's free monthly allowance.
+- **Search**: spending limits (Google requests per search and per month), the most cells per search, and the prices used for cost estimates.
 
 To add a setting, add a property to the class in [app/Settings](app/Settings) and a settings migration in [database/settings](database/settings).
 
@@ -121,6 +117,12 @@ Each kind of work has its own queue and its own Horizon supervisor ([config/hori
 | `pagespeed` | PageSpeed / Lighthouse runs | 1 | 180s |
 | `mail` | Outreach emails | 1 | 60s |
 | `default` | Everything else | 1–3 | 60s |
+
+Searches only run while a worker is processing these queues. `composer dev` starts one for you: Horizon when the queue is on Redis, otherwise a listener on all five queues. To run a worker on its own without Redis:
+
+```sh
+php artisan queue:work --queue=search,enrich,pagespeed,mail,default
+```
 
 `REDIS_QUEUE_RETRY_AFTER` (240s) must stay above the longest timeout, or a slow job can run twice. A test checks this.
 

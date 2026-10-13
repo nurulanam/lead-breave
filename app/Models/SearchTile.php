@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * One cell of a search's grid. Each cell is fetched page by page, so a cell
  * is the unit of locking, retrying and billing.
+ *
+ * @property TileStatus $status
+ * @property float $lat
+ * @property float $lng
  */
 #[Fillable([
     'search_id', 'parent_id', 'depth', 'lat', 'lng', 'radius_m', 'page', 'next_page_token',
@@ -30,6 +34,10 @@ class SearchTile extends Model
      */
     protected $attributes = [
         'status' => 'pending',
+        'depth' => 0,
+        'page' => 1,
+        'results' => 0,
+        'attempts' => 0,
     ];
 
     /**
@@ -41,6 +49,11 @@ class SearchTile extends Model
             'status' => TileStatus::class,
             'lat' => 'float',
             'lng' => 'float',
+            'depth' => 'integer',
+            'radius_m' => 'integer',
+            'page' => 'integer',
+            'results' => 'integer',
+            'attempts' => 'integer',
         ];
     }
 
