@@ -7,11 +7,10 @@ use App\Enums\LeadSource;
 use App\Models\Lead;
 use App\Models\Search;
 use App\Services\Google\Place;
+use App\Services\Leads\LeadMatcher;
 use App\Support\Domain;
 use App\Support\Phone;
 use App\Support\Timezones;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -22,14 +21,12 @@ use Illuminate\Support\Facades\DB;
  */
 class PlaceIngestor
 {
-    /** @var array<string, Lead> */
-    private array $byPlaceId = [];
+    private LeadMatcher $matcher;
 
-    /** @var array<string, Lead> */
-    private array $byDomain = [];
-
-    /** @var array<string, Lead> */
-    private array $byPhone = [];
+    public function __construct()
+    {
+        $this->matcher = new LeadMatcher;
+    }
 
     /**
      * @param  list<Place>  $places
@@ -48,20 +45,22 @@ class PlaceIngestor
             'phone' => Phone::toE164($place->internationalPhone, $place->phone, $place->country ?? $search->country),
         ], $places);
 
-        $this->rememberAll($this->findExisting($normalized));
+        $this->matcher->load(array_map(fn (array $row): array => [
+            'place_id' => $row['place']->id,
+            'domain' => $row['domain'],
+            'phone' => $row['phone'],
+        ], $normalized));
 
         $newLinks = [];
         $existingLinks = [];
 
         foreach ($normalized as $index => ['place' => $place, 'domain' => $domain, 'phone' => $phone]) {
-            $lead = $this->byPlaceId[$place->id]
-                ?? ($domain !== null ? $this->byDomain[$domain] ?? null : null)
-                ?? ($phone !== null ? $this->byPhone[$phone] ?? null : null);
+            $lead = $this->matcher->find($place->id, $domain, $phone);
 
             $isNew = $lead === null;
             $lead = $isNew ? $this->create($place, $phone) : $this->refresh($lead, $place, $phone);
 
-            $this->remember($lead);
+            $this->matcher->remember($lead);
 
             $row = ['lead_id' => $lead->id, 'search_id' => $search->id, 'rank' => $firstRank + $index, 'created_at' => now(), 'updated_at' => now()];
 
@@ -78,31 +77,6 @@ class PlaceIngestor
         $linked = $this->linkExisting($search, $existingLinks);
 
         return new IngestResult(count($places), $created, $linked);
-    }
-
-    /**
-     * @param  list<array{place: Place, domain: string|null, phone: string|null}>  $normalized
-     * @return Collection<int, Lead>
-     */
-    private function findExisting(array $normalized): Collection
-    {
-        $placeIds = array_column(array_column($normalized, 'place'), 'id');
-        $domains = array_values(array_filter(array_column($normalized, 'domain')));
-        $phones = array_values(array_filter(array_column($normalized, 'phone')));
-
-        return Lead::query()
-            ->where(function (Builder $query) use ($placeIds, $domains, $phones): void {
-                $query->whereIn('place_id', $placeIds);
-
-                if ($domains !== []) {
-                    $query->orWhereIn('domain', $domains);
-                }
-
-                if ($phones !== []) {
-                    $query->orWhereIn('phone_e164', $phones);
-                }
-            })
-            ->get();
     }
 
     /**
@@ -206,30 +180,5 @@ class PlaceIngestor
         $domain = Domain::fromUrl($website);
 
         return Domain::isShared($domain) ? null : $domain;
-    }
-
-    /**
-     * @param  iterable<Lead>  $leads
-     */
-    private function rememberAll(iterable $leads): void
-    {
-        foreach ($leads as $lead) {
-            $this->remember($lead);
-        }
-    }
-
-    private function remember(Lead $lead): void
-    {
-        if ($lead->place_id !== null) {
-            $this->byPlaceId[$lead->place_id] = $lead;
-        }
-
-        if (! Domain::isShared($lead->domain)) {
-            $this->byDomain[(string) $lead->domain] = $lead;
-        }
-
-        if ($lead->phone_e164 !== null) {
-            $this->byPhone[$lead->phone_e164] = $lead;
-        }
     }
 }

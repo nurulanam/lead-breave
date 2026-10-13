@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property SocialPlatform $platform
+ * @property DataSource $source
+ */
 #[Fillable(['lead_id', 'platform', 'url', 'handle', 'source'])]
 class LeadSocial extends Model
 {

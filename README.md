@@ -12,7 +12,7 @@ The workflow it supports:
 6. Send an automatic follow-up after 2 business days if there is no reply.
 7. Propose a meeting (Zoom, Google Meet or a booking link).
 
-The build plan is in [PHASES.md](PHASES.md) and the original requirements are in [requiments.md](requiments.md). The plan has 19 phases. **Phases 0–3 are done** (foundation, app shell and design, core data model, Google Maps search), so you can log in, run a search by trade and ZIP code, and watch the leads arrive. The leads workspace (Phase 4) is next.
+The build plan is in [PHASES.md](PHASES.md) and the original requirements are in [requiments.md](requiments.md). The plan has 19 phases. **Phases 0–4 are done** (foundation, app shell and design, core data model, Google Maps search, leads workspace), so you can search Google Maps anywhere, then browse, edit, fill in, import and merge leads. The website check (Phase 5) is next.
 
 ## Stack
 

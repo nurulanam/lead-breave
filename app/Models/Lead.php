@@ -155,6 +155,47 @@ class Lead extends Model
     }
 
     /**
+     * Open leads missing a website or an email address: the "Needs info" queue.
+     *
+     * @param  Builder<Lead>  $query
+     */
+    #[Scope]
+    protected function needsInfo(Builder $query): void
+    {
+        self::whereNeedsInfo($query);
+    }
+
+    /**
+     * The "needs info" rule, for queries typed only as a plain Builder.
+     *
+     * @param  Builder<Lead>  $query
+     * @return Builder<Lead>
+     */
+    public static function whereNeedsInfo(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', [LeadStatus::NotAFit, LeadStatus::Won, LeadStatus::Lost, LeadStatus::Unsubscribed])
+            ->where(fn (Builder $missing) => $missing->whereNull('website')->orWhereDoesntHave('emails'));
+    }
+
+    /**
+     * Assign or unassign the lead, logging the change on its timeline.
+     */
+    public function assignTo(?User $owner, ?User $by = null): void
+    {
+        if ($this->owner_id === $owner?->getKey()) {
+            return;
+        }
+
+        $this->forceFill(['owner_id' => $owner?->getKey()])->save();
+
+        $this->events()->create([
+            'type' => LeadEventType::OwnerChanged,
+            'user_id' => $by?->getKey() ?? auth()->id(),
+            'data' => array_filter(['to_id' => $owner?->getKey(), 'to_name' => $owner?->name]),
+        ]);
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function owner(): BelongsTo

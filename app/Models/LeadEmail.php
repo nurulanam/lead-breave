@@ -11,6 +11,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @property DataSource $source
+ * @property bool $is_primary
+ * @property bool $is_role
+ * @property int $confidence
+ */
 #[Fillable(['lead_id', 'email', 'source', 'found_on_url', 'confidence', 'is_role', 'is_primary', 'verified_status'])]
 class LeadEmail extends Model
 {

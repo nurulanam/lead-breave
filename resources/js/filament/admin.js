@@ -82,6 +82,17 @@ function searchMap(initial) {
                 }).addTo(this.layers);
             }
 
+            if (data.marker) {
+                L.circleMarker([data.center.lat, data.center.lng], {
+                    radius: 8,
+                    color: '#ffffff',
+                    weight: 3,
+                    fillColor: '#7c3aed',
+                    fillOpacity: 1,
+                    interactive: false,
+                }).addTo(this.layers);
+            }
+
             const areaKey = JSON.stringify(data.area ?? data.bounds ?? [data.center, data.zoom]);
 
             if (areaKey === this.areaKey) {

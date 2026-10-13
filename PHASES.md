@@ -2,7 +2,7 @@
 
 Port of the **LeadMap** WordPress plugin (`~/Sites/gmap-scrapper/leadmap`, v0.7.0) to a standalone Laravel application. We keep what works, fix the known weaknesses, and build the parts of the workflow that were never finished.
 
-> **Status:** Phases 0–3 are done. Phases 4 onward are a plan: review and correct them before each one starts.
+> **Status:** Phases 0–4 are done. Phases 5 onward are a plan: review and correct them before each one starts.
 
 ---
 
@@ -24,8 +24,8 @@ Port of the **LeadMap** WordPress plugin (`~/Sites/gmap-scrapper/leadmap`, v0.7.
 | 1 | [App shell and design system](#phase-1-app-shell-and-design-system) | – | Aurora theme, login, dashboard shell | S | ✅ Done |
 | 2 | [Core data model](#phase-2-core-data-model) | – | Leads, searches, emails, socials, events | M | ✅ Done |
 | 3 | [Search](#phase-3-search-google-maps-discovery) | 1 | Google Maps search with grid tiling | L | ✅ Done |
-| 4 | [Leads workspace](#phase-4-leads-workspace) | 2 | Lead table, lead page, manual entry, CSV import | M | Next |
-| 5 | [Website check](#phase-5-website-check) | 2 | Crawl: emails, socials, YouTube, tech, SEO | L | |
+| 4 | [Leads workspace](#phase-4-leads-workspace) | 2 | Lead table, lead page, manual entry, CSV import | M | ✅ Done |
+| 5 | [Website check](#phase-5-website-check) | 2 | Crawl: emails, socials, YouTube, tech, SEO | L | Next |
 | 6 | [PageSpeed](#phase-6-pagespeed) | 3 | On-demand mobile/desktop Lighthouse runs | M | |
 | 7 | [Scoring](#phase-7-scoring) | 3 | Opportunity score and fit score | S | |
 | 8 | [Triage](#phase-8-triage) | 3 | Fast visual first pass with verdicts | S | |
@@ -165,16 +165,20 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 
 ## Phase 4: Leads workspace
 
+**Status:** ✅ Done (2026-10-13)
+
 **Goal:** workflow step 2 (manual part). A fast place to browse, fix and add leads.
 
-- [ ] **Leads table** (Filament): name, category, city, website, best email, socials icons, rating, scores, status, and owner. Filters: search, status, has website, has email, needs info, score range, owner. Saved views.
-- [ ] Bulk actions: assign owner, change status, re-run website check, run PageSpeed, export, delete.
-- [ ] **Lead page**: a header with name, status and quick actions. Tabs for Overview, Emails and socials, Website, Audit, Outreach and Activity. Each tab fills in as its phase ships.
-- [ ] Manual edit: website, emails (add, set primary, delete) and socials. Manual values are marked `source=manual` and are never overwritten by a crawl.
-- [ ] **Needs info** queue: leads with no website or no email, worked one by one with keyboard shortcuts.
-- [ ] **Manual lead creation** with the same dedupe as search (warns and offers to open the existing lead).
-- [ ] **CSV import**: upload, column mapping, a dry-run preview (new / duplicate / invalid), then a queued import. Uses the same dedupe.
-- [ ] Duplicate merge: pick a winner, move emails, socials, events and search links, and keep an audit trail.
+> Notes: "Saved views" are list tabs (All, Mine, New, Needs info, In progress, Contacted, Closed) plus filters and search that persist per user; shared saved filters stay in Phase 16. Bulk "re-run website check", "run PageSpeed" and "export" arrive with Phases 5, 6 and 16, which build those jobs. Dedupe is shared by search, manual entry and CSV import (`LeadMatcher`: place id, domain, phone, then email). Deleting leads needs the new `delete leads` permission (admins). The CSV upload uses Livewire's own upload rather than Filament's FilePond field, which stalled in testing.
+
+- [x] **Leads table** (Filament): name, category, city, website, best email, socials icons, rating, scores, status, and owner. Filters: search, status, has website, has email, needs info, score range, owner. Saved views.
+- [x] Bulk actions: assign owner, change status, delete. *(Re-run website check, run PageSpeed and export arrive with Phases 5, 6 and 16.)*
+- [x] **Lead page**: a header with name, status and quick actions. Tabs for Overview, Emails and socials, Website, Audit, Outreach and Activity. Each tab fills in as its phase ships.
+- [x] Manual edit: website, emails (add, set primary, delete) and socials. Manual values are marked `source=manual` and are never overwritten by a crawl.
+- [x] **Needs info** queue: leads with no website or no email, worked one by one with keyboard shortcuts.
+- [x] **Manual lead creation** with the same dedupe as search (warns and offers to open the existing lead).
+- [x] **CSV import**: upload, column mapping, a dry-run preview (new / duplicate / invalid), then a queued import. Uses the same dedupe.
+- [x] Duplicate merge: pick a winner, move emails, socials, events and search links, and keep an audit trail.
 
 **Done when:** a researcher can find any lead in under a second, fill in missing details, import a CSV of 500 rows, and merge two duplicates.
 

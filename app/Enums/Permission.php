@@ -9,6 +9,7 @@ enum Permission: string
     case ViewSystemTools = 'view system tools';
     case RunSearches = 'run searches';
     case EditLeads = 'edit leads';
+    case DeleteLeads = 'delete leads';
     case AuditLeads = 'audit leads';
     case SendOutreach = 'send outreach';
 }
