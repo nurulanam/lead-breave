@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float|null $center_lng
  */
 #[Fillable([
-    'user_id', 'industry', 'location', 'zip', 'country', 'center_lat', 'center_lng', 'radius_m',
+    'user_id', 'industry', 'location', 'city', 'zip', 'country', 'center_lat', 'center_lng', 'radius_m',
     'tiling', 'status', 'tiles_total', 'tiles_done', 'results_found', 'leads_created',
     'leads_linked', 'api_cost_units', 'stop_reason', 'started_at', 'completed_at',
 ])]

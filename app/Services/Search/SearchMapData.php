@@ -6,6 +6,7 @@ use App\Enums\TileStatus;
 use App\Models\Search;
 use App\Models\SearchTile;
 use App\Services\Google\Coordinates;
+use App\Services\Google\GeocodeResult;
 use App\Services\Google\Rectangle;
 
 /**
@@ -13,6 +14,21 @@ use App\Services\Google\Rectangle;
  */
 class SearchMapData
 {
+    /**
+     * Frame a place (a country, a city) before a search area exists.
+     *
+     * @return array{center: array{lat: float, lng: float}, bounds: list<list<float>>|null, area: null, tiles: list<never>}
+     */
+    public static function forPlace(GeocodeResult $place): array
+    {
+        return [
+            'center' => ['lat' => $place->center->lat, 'lng' => $place->center->lng],
+            'bounds' => $place->viewport ? self::bounds($place->viewport) : null,
+            'area' => null,
+            'tiles' => [],
+        ];
+    }
+
     /**
      * A starting view before any area is chosen: the most recent search, or the whole US.
      *

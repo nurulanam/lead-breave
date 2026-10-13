@@ -35,7 +35,7 @@ class PlacesClient
      *
      * @throws GoogleApiException
      */
-    public function searchText(string $query, Rectangle $area, ?string $pageToken = null, ?Model $related = null): PlacesPage
+    public function searchText(string $query, Rectangle $area, ?string $pageToken = null, ?Model $related = null, ?string $regionCode = null): PlacesPage
     {
         $key = $this->settings->google_api_key ?? throw GoogleApiException::missingKey();
 
@@ -43,6 +43,7 @@ class PlacesClient
             'textQuery' => $query,
             'pageSize' => self::PAGE_SIZE,
             'locationRestriction' => ['rectangle' => $area->toApi()],
+            'regionCode' => $regionCode !== null ? strtolower($regionCode) : null,
             'pageToken' => $pageToken,
         ]);
 

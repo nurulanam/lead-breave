@@ -4,6 +4,7 @@ namespace App\Services\Google;
 
 use App\Models\ApiCall;
 use App\Settings\ApiSettings;
+use App\Support\Countries;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
@@ -20,31 +21,42 @@ class Geocoder
     public function __construct(private ApiSettings $settings) {}
 
     /**
-     * Resolve a ZIP code or place name. Results are cached for 30 days as plain
-     * arrays (the cache refuses to unserialize objects), so repeat searches in
-     * the same area cost nothing.
+     * Find a city, a postal code, or both, inside one country. With no city or
+     * postal code the country itself is found, for framing the map. Results are
+     * cached for 30 days as plain arrays (the cache refuses to unserialize
+     * objects), so repeat lookups cost nothing.
      *
      * @throws GoogleApiException
      */
-    public function geocode(string $location, string $country = 'US', ?Model $related = null): GeocodeResult
+    public function geocode(?string $city, ?string $postalCode, string $country, ?Model $related = null): GeocodeResult
     {
-        $cacheKey = 'geocode:'.sha1(mb_strtolower(trim($location)).'|'.strtoupper($country));
+        $city = trim((string) $city);
+        $postalCode = trim((string) $postalCode);
+        $country = strtoupper(trim($country));
+        $cacheKey = 'geocode:'.sha1(mb_strtolower($city).'|'.mb_strtolower($postalCode).'|'.$country);
 
         return GeocodeResult::fromArray(
-            Cache::remember($cacheKey, now()->addDays(30), fn (): array => $this->fetch($location, $country, $related)->toArray()),
+            Cache::remember($cacheKey, now()->addDays(30), fn (): array => $this->fetch($city, $postalCode, $country, $related)->toArray()),
         );
     }
 
-    private function fetch(string $location, string $country, ?Model $related): GeocodeResult
+    private function fetch(string $city, string $postalCode, string $country, ?Model $related): GeocodeResult
     {
         $key = $this->settings->google_api_key ?? throw GoogleApiException::missingKey();
         $startedAt = hrtime(true);
+
+        $components = array_filter(['country:'.$country, $postalCode !== '' ? 'postal_code:'.$postalCode : null]);
+        $query = array_filter([
+            'address' => $city !== '' ? $city : null,
+            'components' => implode('|', $components),
+            'key' => $key,
+        ]);
 
         try {
             $response = Http::timeout(10)
                 ->connectTimeout(5)
                 ->retry(2, 500, throw: false)
-                ->get(self::URL, ['address' => $location, 'components' => 'country:'.strtoupper($country), 'key' => $key]);
+                ->get(self::URL, $query);
         } catch (ConnectionException $e) {
             ApiCall::record('google_geocoding', 'geocode/json', null, $this->elapsedMs($startedAt), 0, $related);
 
@@ -57,7 +69,9 @@ class Geocoder
         ApiCall::record('google_geocoding', 'geocode/json', $response->status(), $this->elapsedMs($startedAt), $billed ? 1 : 0, $related);
 
         if ($status === 'ZERO_RESULTS') {
-            throw new GoogleApiException("Google could not find \"{$location}\". Try a ZIP code or \"City, State\".");
+            $what = implode(' ', array_filter([$city, $postalCode])) ?: 'that place';
+
+            throw new GoogleApiException("Google could not find \"{$what}\" in ".Countries::name($country).'. Check the spelling, or try the postal code on its own.');
         }
 
         if ($status !== 'OK' || $response->failed()) {
@@ -91,11 +105,13 @@ class Geocoder
 
         $viewport = $result['geometry']['viewport'] ?? null;
         $radius = 5000;
+        $bounds = null;
 
         if ($viewport !== null) {
             $northEast = new Coordinates((float) $viewport['northeast']['lat'], (float) $viewport['northeast']['lng']);
             $southWest = new Coordinates((float) $viewport['southwest']['lat'], (float) $viewport['southwest']['lng']);
             $radius = (int) min(25000, max(1000, round($northEast->distanceTo($southWest) / 2, -2)));
+            $bounds = new Rectangle($southWest, $northEast);
         }
 
         return new GeocodeResult(
@@ -106,6 +122,7 @@ class Geocoder
             region: $components['administrative_area_level_1'] ?? null,
             country: $components['country'] ?? null,
             suggestedRadiusM: $radius,
+            viewport: $bounds,
         );
     }
 

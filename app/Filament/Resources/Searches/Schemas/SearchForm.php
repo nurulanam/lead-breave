@@ -9,11 +9,14 @@ use App\Services\Google\GoogleApiException;
 use App\Services\Search\CostGuard;
 use App\Services\Search\CoverageEstimate;
 use App\Services\Search\SearchMapData;
+use App\Settings\GeneralSettings;
 use App\Settings\SearchSettings;
+use App\Support\Countries;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -63,18 +66,36 @@ class SearchForm
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn (Get $get, Component $livewire) => self::pushPreview($get, $livewire))
                             ->helperText('Use the words a customer would type into Google Maps.'),
-                        TextInput::make('location')
-                            ->label('ZIP code or city')
-                            ->placeholder('10001 or Austin, TX')
-                            ->prefixIcon(Heroicon::OutlinedMapPin)
+                        Select::make('country')
+                            ->label('Country')
+                            ->options(Countries::options())
+                            ->default(fn (): string => app(GeneralSettings::class)->default_country)
+                            ->searchable()
                             ->required()
-                            ->maxLength(150)
-                            ->live(debounce: 700)
-                            ->afterStateUpdated(function (?string $state, Get $get, Set $set, Component $livewire): void {
-                                self::locate((string) $state, $set);
-                                self::pushPreview($get, $livewire);
-                            })
-                            ->helperText('The area appears on the map as you type.'),
+                            ->selectablePlaceholder(false)
+                            ->live()
+                            ->afterStateUpdated(fn (Get $get, Set $set, Component $livewire) => self::relocate($get, $set, $livewire)),
+                        Grid::make(['default' => 1, 'sm' => 2])
+                            ->schema([
+                                TextInput::make('city')
+                                    ->label('City or area')
+                                    ->placeholder('Austin')
+                                    ->prefixIcon(Heroicon::OutlinedBuildingOffice2)
+                                    ->maxLength(120)
+                                    ->requiredWithout('zip')
+                                    ->validationMessages(['required_without' => 'Enter a city or a ZIP / postal code.'])
+                                    ->live(debounce: 700)
+                                    ->afterStateUpdated(fn (Get $get, Set $set, Component $livewire) => self::relocate($get, $set, $livewire)),
+                                TextInput::make('zip')
+                                    ->label('ZIP / postal code')
+                                    ->placeholder('78701')
+                                    ->prefixIcon(Heroicon::OutlinedMapPin)
+                                    ->maxLength(20)
+                                    ->requiredWithout('city')
+                                    ->validationMessages(['required_without' => 'Enter a city or a ZIP / postal code.'])
+                                    ->live(debounce: 700)
+                                    ->afterStateUpdated(fn (Get $get, Set $set, Component $livewire) => self::relocate($get, $set, $livewire)),
+                            ]),
                         Select::make('radius_m')
                             ->label('Search radius')
                             ->options(self::RADII)
@@ -93,7 +114,7 @@ class SearchForm
                             ->afterStateUpdated(fn (Get $get, Component $livewire) => self::pushPreview($get, $livewire)),
                         Hidden::make('center_lat'),
                         Hidden::make('center_lng'),
-                        Hidden::make('location_label')->dehydrated(false),
+                        Hidden::make('location_label'),
                         Hidden::make('location_error')->dehydrated(false),
                     ]),
                 Section::make('Coverage preview')
@@ -107,23 +128,33 @@ class SearchForm
     }
 
     /**
-     * Find the typed location on the map. Lookups are cached, so retyping a
-     * place costs nothing, and partial input (two letters, half a ZIP) is skipped.
+     * Re-locate after the country, city or postal code changes, then update the map.
      */
-    private static function locate(string $location, Set $set): void
+    private static function relocate(Get $get, Set $set, Component $livewire): void
     {
-        $location = trim($location);
+        self::locate((string) $get('city'), (string) $get('zip'), (string) $get('country'), $set);
+        self::pushPreview($get, $livewire);
+    }
+
+    /**
+     * Find the city and/or postal code inside the chosen country. Lookups are
+     * cached, so retyping a place costs nothing, and partial input is skipped.
+     */
+    private static function locate(string $city, string $postalCode, string $country, Set $set): void
+    {
+        $city = trim($city);
+        $postalCode = trim($postalCode);
         $set('center_lat', null);
         $set('center_lng', null);
         $set('location_label', null);
         $set('location_error', null);
 
-        if (mb_strlen($location) < 3 || (ctype_digit($location) && strlen($location) !== 5)) {
+        if (! self::isWorthLookingUp($city, $postalCode, $country)) {
             return;
         }
 
         try {
-            $place = app(Geocoder::class)->geocode($location);
+            $place = app(Geocoder::class)->geocode($city, $postalCode, $country);
         } catch (GoogleApiException $e) {
             $set('location_error', $e->getMessage());
 
@@ -133,6 +164,40 @@ class SearchForm
         $set('center_lat', $place->center->lat);
         $set('center_lng', $place->center->lng);
         $set('location_label', $place->formattedAddress);
+    }
+
+    /**
+     * Skip half-typed input: a city needs three letters, and a US ZIP all five digits.
+     */
+    private static function isWorthLookingUp(string $city, string $postalCode, string $country): bool
+    {
+        if (! Countries::exists($country)) {
+            return false;
+        }
+
+        $postalReady = mb_strlen($postalCode) >= 3
+            && ! (strtoupper($country) === 'US' && ctype_digit($postalCode) && strlen($postalCode) !== 5);
+
+        return mb_strlen($city) >= 3 || $postalReady;
+    }
+
+    /**
+     * Frame the chosen country before a city or postal code is typed. Falls
+     * back to the default view when the country cannot be looked up.
+     *
+     * @return array<string, mixed>
+     */
+    private static function countryView(string $country): array
+    {
+        if (! Countries::exists($country)) {
+            return SearchMapData::default();
+        }
+
+        try {
+            return SearchMapData::forPlace(app(Geocoder::class)->geocode(null, null, $country));
+        } catch (GoogleApiException) {
+            return SearchMapData::default();
+        }
     }
 
     /**
@@ -151,7 +216,7 @@ class SearchForm
         $lat = $get('center_lat');
         $lng = $get('center_lng');
         $estimate = null;
-        $map = SearchMapData::default();
+        $map = self::countryView((string) $get('country'));
 
         if (is_numeric($lat) && is_numeric($lng)) {
             $center = new Coordinates((float) $lat, (float) $lng);

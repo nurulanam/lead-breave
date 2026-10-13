@@ -8,12 +8,12 @@
     ])
 
     <div class="flex min-h-5 items-center gap-2 text-sm">
-        <span wire:loading.flex wire:target="data.location" class="items-center gap-2 text-gray-500 dark:text-gray-400">
+        <span wire:loading.flex wire:target="data.city, data.zip, data.country" class="items-center gap-2 text-gray-500 dark:text-gray-400">
             <x-filament::loading-indicator class="size-4" />
             Finding the area…
         </span>
 
-        <span wire:loading.remove wire:target="data.location" class="flex items-center gap-2">
+        <span wire:loading.remove wire:target="data.city, data.zip, data.country" class="flex items-center gap-2">
             @if ($error)
                 <x-filament::icon icon="heroicon-m-exclamation-triangle" class="size-4 shrink-0 text-amber-500" />
                 <span class="text-amber-700 dark:text-amber-300">{{ $error }}</span>
@@ -22,7 +22,7 @@
                 <span class="text-gray-700 dark:text-gray-200">{{ $label }}</span>
             @else
                 <x-filament::icon icon="heroicon-m-map-pin" class="size-4 shrink-0 text-gray-400" />
-                <span class="text-gray-500 dark:text-gray-400">Type a ZIP code or city to see the area and what it will cost.</span>
+                <span class="text-gray-500 dark:text-gray-400">Enter a city or a ZIP / postal code to see the area and what it will cost.</span>
             @endif
         </span>
     </div>

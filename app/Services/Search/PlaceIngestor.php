@@ -9,7 +9,7 @@ use App\Models\Search;
 use App\Services\Google\Place;
 use App\Support\Domain;
 use App\Support\Phone;
-use App\Support\UsTimezones;
+use App\Support\Timezones;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -161,7 +161,7 @@ class PlaceIngestor
             'country' => $place->country,
             'lat' => $place->location?->lat,
             'lng' => $place->location?->lng,
-            'timezone' => UsTimezones::forState($place->country, $place->region),
+            'timezone' => Timezones::guess($place->country, $place->region, $place->location?->lat, $place->location?->lng),
             'category' => $place->category,
             'rating' => $place->rating,
             'review_count' => $place->reviewCount,

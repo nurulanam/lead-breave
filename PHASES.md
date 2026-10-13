@@ -136,7 +136,7 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 
 **Goal:** workflow step 1. Find every business of a type in an area, fast, without paying twice.
 
-> Notes: Text Search only accepts a **rectangle** as a hard location limit, so cells are squares (`radius_m` on a tile is half the side). Splitting stops at depth 2 or cells under 250 m. Spend limits and estimate prices are admin settings (Settings > Search), not config. The timezone comes from the US state (`UsTimezones`), not from lat/lng; non-US leads get none for now. Dedupe ports LeadMap's rule that shared hosts (facebook.com, wixsite.com…) never count as a domain match. Existing leads are refreshed, but hand-entered phone and website values are never overwritten. Map tiles are OpenStreetMap's public tiles (fine for an internal tool; switch to a keyed provider if traffic grows). Not done here: dispatching the website check for new leads moves to Phase 5, which builds that job.
+> Notes: Text Search only accepts a **rectangle** as a hard location limit, so cells are squares (`radius_m` on a tile is half the side). Splitting stops at depth 2 or cells under 250 m. Spend limits and estimate prices are admin settings (Settings > Search), not config. Searches work in any country: the form takes a country, city and ZIP/postal code, geocoding filters by country and postal code, and Places gets the country as `regionCode`. Timezones come from the US state map, or elsewhere from the country's zone nearest the business (`Timezones::guess`). Dedupe ports LeadMap's rule that shared hosts (facebook.com, wixsite.com…) never count as a domain match. Existing leads are refreshed, but hand-entered phone and website values are never overwritten. Map tiles are OpenStreetMap's public tiles (fine for an internal tool; switch to a keyed provider if traffic grows). Not done here: dispatching the website check for new leads moves to Phase 5, which builds that job.
 
 **Backend**
 
@@ -145,14 +145,14 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 - [x] Grid tiling: split the bounds into cells sized for the industry's density (dense for "restaurant", coarse for "roofer"). One `search_tiles` row per cell. Cells that hit the 60-result cap are split again, up to a depth limit.
 - [x] `RunSearchTile` job on the `search` queue: one page per run, a `Cache::lock` per tile and page (so a page is never fetched or billed twice), and the next page as a new job.
 - [x] `IngestPlaces`: dedupe each page in **one batched query** (place_id, then domain, then E.164 phone). New leads are created; existing ones are linked through `lead_search` and their Places data refreshed.
-- [x] Phone normalization with `libphonenumber` (`propaganistas/laravel-phone`), and the timezone derived from the US state.
+- [x] Phone normalization with `libphonenumber` (`propaganistas/laravel-phone`), and the timezone derived from the state (US) or the nearest zone in the country.
 - [x] Cost guard: a per-search cap and a monthly cap, counted from `api_calls`. A search that hits a cap stops cleanly with `stop_reason`.
 - [x] Re-run: resets the counters and tiles, and keeps the existing lead links.
 - [ ] Each new lead dispatches the website check when it has a website. *(Moved to Phase 5, which builds the job.)*
 
 **UI**
 
-- [x] **New search** form: industry (with suggestions), ZIP or city, radius, and tiling mode, plus an estimated cost shown before running.
+- [x] **New search** form: business type (with suggestions), country, city and ZIP/postal code, radius, and coverage mode, with a live map and an estimated cost before running.
 - [x] Map preview (Leaflet) with the search area and the tile grid.
 - [x] **Searches** list: status, progress bar, results, new vs linked leads, cost, and duration.
 - [x] **Search detail** page: a live progress map (tiles colour in as they finish), polled with Livewire, and the leads table filtered to this search.

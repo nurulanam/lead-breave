@@ -15,6 +15,7 @@ use App\Models\Search;
 use App\Services\Google\Geocoder;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
@@ -37,7 +38,8 @@ it('queues a new search for the current user', function () {
     Livewire::test(CreateSearch::class)
         ->fillForm([
             'industry' => '  plumber ',
-            'location' => '10001',
+            'country' => 'US',
+            'zip' => '10001',
             'radius_m' => 2000,
             'tiling' => TilingMode::Single,
         ])
@@ -55,13 +57,13 @@ it('queues a new search for the current user', function () {
     Queue::assertPushed(PlanSearch::class, fn (PlanSearch $job) => $job->searchId === Search::sole()->id);
 });
 
-it('requires a business type and a location', function () {
+it('requires a business type and a city or postal code', function () {
     $this->actingAs(userWithRole(Role::Researcher));
 
     Livewire::test(CreateSearch::class)
-        ->fillForm(['industry' => '', 'location' => ''])
+        ->fillForm(['industry' => '', 'city' => '', 'zip' => ''])
         ->call('create')
-        ->assertHasFormErrors(['industry' => 'required', 'location' => 'required']);
+        ->assertHasFormErrors(['industry' => 'required', 'city' => 'required_without', 'zip' => 'required_without']);
 
     expect(Search::count())->toBe(0);
 });
@@ -87,24 +89,43 @@ it('previews the area as soon as a location is typed', function () {
     $this->actingAs(userWithRole(Role::Researcher));
 
     Livewire::test(CreateSearch::class)
-        ->fillForm(['industry' => 'plumber', 'tiling' => TilingMode::Grid, 'radius_m' => 5000])
-        ->fillForm(['location' => '10001'])
+        ->fillForm(['industry' => 'plumber', 'country' => 'US', 'tiling' => TilingMode::Grid, 'radius_m' => 5000])
+        ->fillForm(['zip' => '10001'])
         ->assertSchemaStateSet(['center_lat' => 40.7506, 'center_lng' => -73.9972, 'radius_m' => 5000])
         ->assertSee('New York, NY 10001, USA')
         ->assertSee('16–48');
 });
 
-it('waits for a whole ZIP code or three letters before looking anything up', function (string $partial) {
+it('waits for a whole ZIP code or three letters before looking anything up', function (array $input) {
     Http::preventStrayRequests();
     $this->actingAs(userWithRole(Role::Researcher));
 
     Livewire::test(CreateSearch::class)
-        ->fillForm(['location' => $partial])
+        ->fillForm(['country' => 'US', ...$input])
         ->assertSchemaStateSet(['center_lat' => null])
-        ->assertSee('Type a ZIP code or city');
+        ->assertSee('Enter a city or a ZIP / postal code');
 
     Http::assertNothingSent();
-})->with(['half a ZIP' => ['100'], 'two letters' => ['Au']]);
+})->with(['half a US ZIP' => [['zip' => '100']], 'two letters' => [['city' => 'Au']]]);
+
+it('searches outside the US with the country and postal code', function () {
+    useGoogleKey();
+    fakeGeocodeOf10001();
+    Queue::fake();
+    $this->actingAs(userWithRole(Role::Researcher));
+
+    Livewire::test(CreateSearch::class)
+        ->fillForm(['industry' => 'dentist', 'country' => 'IN', 'city' => 'New Delhi', 'zip' => '110001'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Search::sole())
+        ->country->toBe('IN')
+        ->city->toBe('New Delhi')
+        ->zip->toBe('110001');
+
+    Http::assertSent(fn (Request $request) => ($request['components'] ?? null) === 'country:IN|postal_code:110001');
+});
 
 it('says when a location cannot be found', function () {
     useGoogleKey();
@@ -112,7 +133,7 @@ it('says when a location cannot be found', function () {
     $this->actingAs(userWithRole(Role::Researcher));
 
     Livewire::test(CreateSearch::class)
-        ->fillForm(['location' => 'Nowhereville'])
+        ->fillForm(['country' => 'US', 'city' => 'Nowhereville'])
         ->assertSchemaStateSet(['center_lat' => null])
         ->assertSee('Google could not find');
 });

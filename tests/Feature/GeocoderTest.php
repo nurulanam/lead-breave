@@ -44,7 +44,7 @@ function geocodeResponse(): array
 it('resolves a ZIP code to a centre and a suggested radius', function () {
     Http::fake([Geocoder::URL.'*' => Http::response(geocodeResponse())]);
 
-    $result = app(Geocoder::class)->geocode('10001');
+    $result = app(Geocoder::class)->geocode(null, '10001', 'US');
 
     expect($result->center->lat)->toBe(40.7506)
         ->and($result->postalCode)->toBe('10001')
@@ -53,17 +53,35 @@ it('resolves a ZIP code to a centre and a suggested radius', function () {
         ->and($result->suggestedRadiusM)->toBe(1500)
         ->and(ApiCall::forProvider('google_geocoding')->sole()->cost_units)->toBe(1);
 
-    Http::assertSent(fn (Request $request) => $request['address'] === '10001'
-        && $request['components'] === 'country:US'
+    Http::assertSent(fn (Request $request) => ! isset($request['address'])
+        && $request['components'] === 'country:US|postal_code:10001'
         && $request['key'] === 'secret-key-123');
+});
+
+it('looks up a city and postal code inside any country', function () {
+    Http::fake([Geocoder::URL.'*' => Http::response(geocodeResponse())]);
+
+    app(Geocoder::class)->geocode('New Delhi', '110001', 'in');
+
+    Http::assertSent(fn (Request $request) => $request['address'] === 'New Delhi'
+        && $request['components'] === 'country:IN|postal_code:110001');
+});
+
+it('returns the viewport so the map can frame the place', function () {
+    Http::fake([Geocoder::URL.'*' => Http::response(geocodeResponse())]);
+
+    $viewport = app(Geocoder::class)->geocode(null, '10001', 'US')->viewport;
+
+    expect($viewport->low->lat)->toBe(40.7411)
+        ->and($viewport->high->lng)->toBe(-73.9851);
 });
 
 it('serves repeat lookups from the cache', function () {
     config(['cache.default' => 'database']);
     Http::fake([Geocoder::URL.'*' => Http::response(geocodeResponse())]);
 
-    app(Geocoder::class)->geocode('10001');
-    $cached = app(Geocoder::class)->geocode(' 10001 ');
+    app(Geocoder::class)->geocode(null, '10001', 'US');
+    $cached = app(Geocoder::class)->geocode(' ', ' 10001 ', 'us');
 
     expect($cached->center->lat)->toBe(40.7506)
         ->and($cached->postalCode)->toBe('10001');
@@ -75,9 +93,9 @@ it('serves repeat lookups from the cache', function () {
 it('explains a location Google cannot find, without caching the miss', function () {
     Http::fake([Geocoder::URL.'*' => Http::response(['status' => 'ZERO_RESULTS', 'results' => []])]);
 
-    expect(fn () => app(Geocoder::class)->geocode('Nowhereville'))
-        ->toThrow(GoogleApiException::class, 'Google could not find "Nowhereville"');
-    expect(fn () => app(Geocoder::class)->geocode('Nowhereville'))->toThrow(GoogleApiException::class);
+    expect(fn () => app(Geocoder::class)->geocode('Nowhereville', null, 'US'))
+        ->toThrow(GoogleApiException::class, 'Google could not find "Nowhereville" in United States');
+    expect(fn () => app(Geocoder::class)->geocode('Nowhereville', null, 'US'))->toThrow(GoogleApiException::class);
 
     Http::assertSentCount(2);
 });
@@ -89,7 +107,7 @@ it('never puts the key in an error message', function () {
     ])]);
 
     try {
-        app(Geocoder::class)->geocode('10001');
+        app(Geocoder::class)->geocode(null, '10001', 'US');
     } catch (GoogleApiException $e) {
         expect($e->getMessage())->not->toContain('secret-key-123')->toContain('[redacted]');
 
@@ -105,7 +123,7 @@ it('locates a search before planning its cells', function () {
         PlacesClient::URL => Http::response(placesPage(1, 2)),
     ]);
 
-    $search = Search::factory()->create(['center_lat' => null, 'center_lng' => null, 'zip' => null, 'location' => '10001', 'radius_m' => 1000]);
+    $search = Search::factory()->create(['center_lat' => null, 'center_lng' => null, 'city' => null, 'zip' => '10001', 'radius_m' => 1000]);
 
     PlanSearch::dispatchSync($search->id);
 
@@ -119,7 +137,7 @@ it('retries a temporary Geocoding error', function () {
     Http::fake([Geocoder::URL.'*' => Http::response(['status' => 'OVER_QUERY_LIMIT', 'error_message' => 'Try later.'])]);
 
     try {
-        app(Geocoder::class)->geocode('10001');
+        app(Geocoder::class)->geocode(null, '10001', 'US');
     } catch (GoogleApiException $e) {
         expect($e->isRetryable())->toBeTrue();
 
@@ -132,7 +150,7 @@ it('retries a temporary Geocoding error', function () {
 it('fails a search whose location cannot be found', function () {
     Http::fake([Geocoder::URL.'*' => Http::response(['status' => 'ZERO_RESULTS', 'results' => []])]);
 
-    $search = Search::factory()->create(['center_lat' => null, 'center_lng' => null, 'zip' => null, 'location' => 'Nowhereville']);
+    $search = Search::factory()->create(['center_lat' => null, 'center_lng' => null, 'city' => 'Nowhereville', 'zip' => null]);
 
     PlanSearch::dispatchSync($search->id);
 

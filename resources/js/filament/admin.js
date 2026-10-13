@@ -82,16 +82,22 @@ function searchMap(initial) {
                 }).addTo(this.layers);
             }
 
-            const areaKey = JSON.stringify(data.area ?? [data.center, data.zoom]);
+            const areaKey = JSON.stringify(data.area ?? data.bounds ?? [data.center, data.zoom]);
 
             if (areaKey === this.areaKey) {
                 return;
             }
 
+            const firstView = this.areaKey === undefined;
             this.areaKey = areaKey;
 
-            if (data.area) {
-                this.map.flyToBounds(data.area, { padding: [16, 16], duration: 0.6 });
+            const bounds = data.area ?? data.bounds;
+
+            if (bounds && firstView) {
+                // A map with no view yet cannot animate, so the first framing is instant.
+                this.map.fitBounds(bounds, { padding: [16, 16], maxZoom: 15 });
+            } else if (bounds) {
+                this.map.flyToBounds(bounds, { padding: [16, 16], duration: 0.8, maxZoom: 15 });
             } else {
                 this.map.setView([data.center.lat, data.center.lng], data.zoom ?? 4);
             }

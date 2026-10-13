@@ -21,7 +21,8 @@ class SearchFactory extends Factory
     {
         return [
             'industry' => fake()->randomElement(['plumber', 'dentist', 'roofer', 'landscaper', 'hvac']),
-            'location' => 'New York, NY',
+            'location' => 'New York, NY 10001, USA',
+            'city' => 'New York',
             'zip' => '10001',
             'country' => 'US',
             'center_lat' => 40.7506,

@@ -46,7 +46,9 @@ class PlanSearch implements ShouldBeUnique, ShouldQueue
 
         if ($search->center_lat === null || $search->center_lng === null) {
             try {
-                $place = $geocoder->geocode($search->zip ?? $search->location, $search->country, $search);
+                $place = $search->city === null && $search->zip === null
+                    ? $geocoder->geocode($search->location, null, $search->country, $search)
+                    : $geocoder->geocode($search->city, $search->zip, $search->country, $search);
             } catch (GoogleApiException $e) {
                 if ($e->isRetryable() && $this->attempts() < $this->tries) {
                     throw $e;

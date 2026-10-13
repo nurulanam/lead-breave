@@ -86,6 +86,7 @@ class RunSearchTile implements ShouldQueue
                 (new PlannedTile(new Coordinates($tile->lat, $tile->lng), $tile->radius_m))->rectangle(),
                 $this->page > 1 ? $tile->next_page_token : null,
                 $tile,
+                $search->country,
             );
         } catch (GoogleApiException $e) {
             $this->handleGoogleError($e, $tile, $runner);

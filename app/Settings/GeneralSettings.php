@@ -19,6 +19,9 @@ class GeneralSettings extends Settings
 
     public string $timezone;
 
+    /** ISO 3166 code the New search form starts with. */
+    public string $default_country;
+
     public static function group(): string
     {
         return 'general';

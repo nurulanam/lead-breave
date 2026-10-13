@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\Permission;
 use App\Settings\GeneralSettings;
+use App\Support\Countries;
 use BackedEnum;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -42,6 +43,12 @@ class ManageGeneralSettings extends SettingsPage
                 TextInput::make('company_name')
                     ->required()
                     ->maxLength(255),
+                Select::make('default_country')
+                    ->label('Default country')
+                    ->options(Countries::options())
+                    ->searchable()
+                    ->required()
+                    ->helperText('New searches start with this country selected.'),
                 Select::make('timezone')
                     ->options(fn (): array => array_combine(timezone_identifiers_list(), timezone_identifiers_list()))
                     ->searchable()
