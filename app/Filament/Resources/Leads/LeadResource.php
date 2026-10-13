@@ -10,6 +10,7 @@ use App\Filament\Resources\Leads\RelationManagers\EmailsRelationManager;
 use App\Filament\Resources\Leads\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Leads\RelationManagers\SearchesRelationManager;
 use App\Filament\Resources\Leads\RelationManagers\SocialsRelationManager;
+use App\Filament\Resources\Leads\RelationManagers\WebsiteChecksRelationManager;
 use App\Filament\Resources\Leads\Schemas\LeadForm;
 use App\Filament\Resources\Leads\Schemas\LeadInfolist;
 use App\Filament\Resources\Leads\Tables\LeadsTable;
@@ -51,6 +52,7 @@ class LeadResource extends Resource
     public static function getRelations(): array
     {
         return [
+            WebsiteChecksRelationManager::class,
             EmailsRelationManager::class,
             SocialsRelationManager::class,
             SearchesRelationManager::class,

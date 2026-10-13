@@ -6,6 +6,7 @@ use App\Enums\DataSource;
 use App\Enums\LeadSource;
 use App\Filament\Resources\Leads\LeadActions;
 use App\Filament\Resources\Leads\LeadResource;
+use App\Jobs\CheckWebsite;
 use App\Models\Lead;
 use App\Services\Leads\LeadInput;
 use App\Services\Leads\LeadMatcher;
@@ -91,6 +92,8 @@ class CreateLead extends CreateRecord
                 'is_primary' => true,
             ]);
         }
+
+        CheckWebsite::forLead($lead);
 
         return $lead;
     }

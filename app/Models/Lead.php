@@ -238,6 +238,14 @@ class Lead extends Model
     }
 
     /**
+     * @return HasMany<WebsiteCheck, $this>
+     */
+    public function websiteChecks(): HasMany
+    {
+        return $this->hasMany(WebsiteCheck::class);
+    }
+
+    /**
      * @return HasMany<LeadEvent, $this>
      */
     public function events(): HasMany

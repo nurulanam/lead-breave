@@ -33,7 +33,7 @@ class PipelineOverview extends Widget
     {
         return [
             ['key' => 'found', 'label' => 'Found', 'description' => 'From Google Maps', 'count' => Lead::query()->count()],
-            ['key' => 'enriched', 'label' => 'Enriched', 'description' => 'Email or socials found', 'count' => 0],
+            ['key' => 'enriched', 'label' => 'Enriched', 'description' => 'Email or socials found', 'count' => Lead::query()->where(fn ($query) => $query->has('emails')->orHas('socials'))->count()],
             ['key' => 'audited', 'label' => 'Audited', 'description' => 'Issues confirmed', 'count' => 0],
             ['key' => 'contacted', 'label' => 'Contacted', 'description' => 'First email sent', 'count' => 0],
             ['key' => 'followed_up', 'label' => 'Followed up', 'description' => 'After 2 business days', 'count' => 0],

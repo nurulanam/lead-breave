@@ -135,6 +135,7 @@ class LeadsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    LeadActions::bulkCheckWebsites(),
                     LeadActions::bulkAssignOwner(),
                     LeadActions::bulkChangeStatus(),
                     DeleteBulkAction::make()->authorizeIndividualRecords('delete'),

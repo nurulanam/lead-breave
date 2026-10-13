@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Leads\Pages;
 
 use App\Enums\LeadEventType;
 use App\Filament\Resources\Leads\LeadResource;
+use App\Jobs\CheckWebsite;
 use App\Models\Lead;
 use App\Models\User;
 use App\Services\Leads\LeadInput;
@@ -54,6 +55,10 @@ class EditLead extends EditRecord
                 'user_id' => auth()->id(),
                 'data' => ['fields' => $changed],
             ]);
+        }
+
+        if (in_array('website', $changed, true)) {
+            CheckWebsite::forLead($record);
         }
 
         $user = auth()->user();

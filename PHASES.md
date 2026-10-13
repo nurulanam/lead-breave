@@ -2,7 +2,7 @@
 
 Port of the **LeadMap** WordPress plugin (`~/Sites/gmap-scrapper/leadmap`, v0.7.0) to a standalone Laravel application. We keep what works, fix the known weaknesses, and build the parts of the workflow that were never finished.
 
-> **Status:** Phases 0–4 are done. Phases 5 onward are a plan: review and correct them before each one starts.
+> **Status:** Phases 0–5 are done. Phases 6 onward are a plan: review and correct them before each one starts.
 
 ---
 
@@ -25,8 +25,8 @@ Port of the **LeadMap** WordPress plugin (`~/Sites/gmap-scrapper/leadmap`, v0.7.
 | 2 | [Core data model](#phase-2-core-data-model) | – | Leads, searches, emails, socials, events | M | ✅ Done |
 | 3 | [Search](#phase-3-search-google-maps-discovery) | 1 | Google Maps search with grid tiling | L | ✅ Done |
 | 4 | [Leads workspace](#phase-4-leads-workspace) | 2 | Lead table, lead page, manual entry, CSV import | M | ✅ Done |
-| 5 | [Website check](#phase-5-website-check) | 2 | Crawl: emails, socials, YouTube, tech, SEO | L | Next |
-| 6 | [PageSpeed](#phase-6-pagespeed) | 3 | On-demand mobile/desktop Lighthouse runs | M | |
+| 5 | [Website check](#phase-5-website-check) | 2 | Crawl: emails, socials, YouTube, tech, SEO | L | ✅ Done |
+| 6 | [PageSpeed](#phase-6-pagespeed) | 3 | On-demand mobile/desktop Lighthouse runs | M | Next |
 | 7 | [Scoring](#phase-7-scoring) | 3 | Opportunity score and fit score | S | |
 | 8 | [Triage](#phase-8-triage) | 3 | Fast visual first pass with verdicts | S | |
 | 9 | [Audit](#phase-9-audit) | 3 | Verification, major/minor issues, problem note | L | |
@@ -172,7 +172,7 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 > Notes: "Saved views" are list tabs (All, Mine, New, Needs info, In progress, Contacted, Closed) plus filters and search that persist per user; shared saved filters stay in Phase 16. Bulk "re-run website check", "run PageSpeed" and "export" arrive with Phases 5, 6 and 16, which build those jobs. Dedupe is shared by search, manual entry and CSV import (`LeadMatcher`: place id, domain, phone, then email). Deleting leads needs the new `delete leads` permission (admins). The CSV upload uses Livewire's own upload rather than Filament's FilePond field, which stalled in testing.
 
 - [x] **Leads table** (Filament): name, category, city, website, best email, socials icons, rating, scores, status, and owner. Filters: search, status, has website, has email, needs info, score range, owner. Saved views.
-- [x] Bulk actions: assign owner, change status, delete. *(Re-run website check, run PageSpeed and export arrive with Phases 5, 6 and 16.)*
+- [x] Bulk actions: assign owner, change status, check websites, delete. *(Run PageSpeed and export arrive with Phases 6 and 16.)*
 - [x] **Lead page**: a header with name, status and quick actions. Tabs for Overview, Emails and socials, Website, Audit, Outreach and Activity. Each tab fills in as its phase ships.
 - [x] Manual edit: website, emails (add, set primary, delete) and socials. Manual values are marked `source=manual` and are never overwritten by a crawl.
 - [x] **Needs info** queue: leads with no website or no email, worked one by one with keyboard shortcuts.
@@ -186,29 +186,33 @@ Phases 6 and 7 can run in parallel with late Phase 5 work. Phase 14 can start as
 
 ## Phase 5: Website check
 
+**Status:** ✅ Done (2026-10-13)
+
 **Goal:** workflow step 2 (automatic part). Everything we can learn from the website without a human.
+
+> Notes: `website_checks` keeps one row per lead and type (latest result). Each connection is pinned to the address the SSRF guard approved (`CURLOPT_RESOLVE`), closing LeadMap's DNS-rebinding gap. Email scoring was rebalanced so a shared inbox (info@) always ranks below a named person; LeadMap's scores capped at 100 and tied. Parked detection only trusts weak signs ("coming soon") on near-empty pages. Status: New/Needs info/Enriched leads show "Enriching" during a check, then Enriched (has an email) or Needs info; leads further along keep their status. Checked against real hosts: example.com, expired and self-signed badssl.com, and a non-existent domain.
 
 **Table:** `website_checks` (`lead_id`, `type`: `crawl`, `seo`, `tech`, `ssl`, `result` JSON, `status`, `error`, `checked_at`). Each check writes its own row, so a re-run never loses another check's data.
 
 **Crawler**
 
-- [ ] Port `Website_Crawler`, `Http_Fetcher`, `Robots` and `Url_Guard` to Laravel's HTTP client: SSRF guard (blocks private IPs, re-checked after every redirect), robots.txt, a 2 MB cap, a 10-second timeout, and a per-host delay.
-- [ ] Page discovery: home page plus up to four contact, about and team pages.
-- [ ] `CheckWebsite` job on the `enrich` queue, with a per-domain rate limiter. Dispatched for every new lead with a website (from `PlaceIngestor`, manual entry and CSV import).
-- [ ] Broken SSL: retry without verification, record "SSL broken" as a finding, and do not mark the site unreachable.
-- [ ] Parked and dead domains are detected and flagged, not crawled further.
+- [x] Port `Website_Crawler`, `Http_Fetcher`, `Robots` and `Url_Guard` to Laravel's HTTP client: SSRF guard (blocks private IPs, re-checked after every redirect), robots.txt, a 2 MB cap, a 10-second timeout, and a per-host delay.
+- [x] Page discovery: home page plus up to four contact, about and team pages.
+- [x] `CheckWebsite` job on the `enrich` queue, with a per-domain rate limiter. Dispatched for every new lead with a website (from `PlaceIngestor`, manual entry and CSV import).
+- [x] Broken SSL: retry without verification, record "SSL broken" as a finding, and do not mark the site unreachable.
+- [x] Parked and dead domains are detected and flagged, not crawled further.
 
 **Extractors**
 
-- [ ] **Emails** (port `Email_Extractor`): mailto links, visible text, JSON-LD, Cloudflare-obfuscated addresses. Each gets a confidence score (own domain, named person vs role inbox, where it was found) and the best one becomes primary.
-- [ ] **Socials (new):** `<a href>`, JSON-LD `sameAs`, header and footer, for Facebook, Instagram, LinkedIn, X, TikTok, YouTube (channel, @handle or video), Pinterest, Yelp and Nextdoor. URLs are normalized and share or intent links are skipped.
-- [ ] **Tech** (port `Tech_Detector`): CMS (WordPress, Wix, Squarespace, Shopify, Webflow, GoDaddy, Duda…), builders (Elementor, Divi, WPBakery), libraries, server, and dated markers (jQuery 1.x, Flash, framesets, table layouts, old WordPress).
-- [ ] **SEO** (port `Seo_Analyzer`): HTTPS, viewport, title and its length, meta description, H1, canonical, schema, Open Graph, favicon, image alt coverage, mixed content, and the footer copyright year.
+- [x] **Emails** (port `Email_Extractor`): mailto links, visible text, JSON-LD, Cloudflare-obfuscated addresses. Each gets a confidence score (own domain, named person vs role inbox, where it was found) and the best one becomes primary.
+- [x] **Socials (new):** `<a href>`, JSON-LD `sameAs`, header and footer, for Facebook, Instagram, LinkedIn, X, TikTok, YouTube (channel, @handle or video), Pinterest, Yelp and Nextdoor. URLs are normalized and share or intent links are skipped.
+- [x] **Tech** (port `Tech_Detector`): CMS (WordPress, Wix, Squarespace, Shopify, Webflow, GoDaddy, Duda…), builders (Elementor, Divi, WPBakery), libraries, server, and dated markers (jQuery 1.x, Flash, framesets, table layouts, old WordPress).
+- [x] **SEO** (port `Seo_Analyzer`): HTTPS, viewport, title and its length, meta description, H1, canonical, schema, Open Graph, favicon, image alt coverage, mixed content, and the footer copyright year.
 
 **UI**
 
-- [ ] Lead page **Website** tab: an overview card per check, each finding with a pass/warn/fail mark, the raw values, and "re-check" per type.
-- [ ] Emails and socials tab shows each email with its confidence and source page, and each social with its platform icon.
+- [x] Lead page **Website** tab: an overview card per check, each finding with a pass/warn/fail mark, the raw values, and "re-check" per type.
+- [x] Emails and socials tab shows each email with its confidence and source page, and each social with its platform icon.
 
 **Done when:** a new lead with a website gets emails (with confidence), socials, YouTube, tech and SEO findings within a minute, and a re-check of one type leaves the others untouched. Dashboard: **Enriched** becomes real.
 

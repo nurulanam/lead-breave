@@ -6,6 +6,7 @@ use App\Enums\DataSource;
 use App\Enums\LeadEventType;
 use App\Enums\LeadSource;
 use App\Enums\SocialPlatform;
+use App\Jobs\CheckWebsite;
 use App\Models\Lead;
 use App\Models\LeadImport;
 use App\Support\Countries;
@@ -111,10 +112,16 @@ class LeadImporter
 
                 if ($existing === null) {
                     $lead = Lead::query()->create([...$row['lead'], 'source' => LeadSource::Csv]);
+                    CheckWebsite::forLead($lead);
                     $created++;
                 } else {
+                    $hadWebsite = filled($existing->website);
                     $lead = $this->fillGaps($existing, $row['lead'], $import);
                     $updated++;
+
+                    if (! $hadWebsite) {
+                        CheckWebsite::forLead($lead);
+                    }
                 }
 
                 $this->attachContacts($lead, $row['data']);

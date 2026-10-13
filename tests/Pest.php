@@ -1,15 +1,23 @@
 <?php
 
 use App\Enums\Role;
+use App\Jobs\CheckWebsite;
 use App\Models\User;
+use App\Services\Website\HostResolver;
 use App\Settings\ApiSettings;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->beforeEach(fn () => $this->seed(RolesAndPermissionsSeeder::class))
+    ->beforeEach(function () {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Website checks reach out to real sites; tests that need one run it directly.
+        Queue::fake([CheckWebsite::class]);
+    })
     ->in('Feature');
 
 function userWithRole(?Role $role): User
@@ -68,4 +76,25 @@ function useGoogleKey(string $key = 'test-google-key'): void
     $settings = app(ApiSettings::class);
     $settings->google_api_key = $key;
     $settings->save();
+}
+
+/**
+ * Answer DNS lookups without the network. Hosts not listed resolve to a public address.
+ *
+ * @param  array<string, list<string>>  $hosts
+ */
+function fakeDns(array $hosts = []): void
+{
+    app()->instance(HostResolver::class, new class($hosts) extends HostResolver
+    {
+        /**
+         * @param  array<string, list<string>>  $hosts
+         */
+        public function __construct(private array $hosts) {}
+
+        public function resolve(string $host): array
+        {
+            return $this->hosts[$host] ?? ['93.184.216.34'];
+        }
+    });
 }

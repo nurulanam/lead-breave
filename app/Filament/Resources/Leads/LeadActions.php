@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Leads;
 
 use App\Enums\LeadStatus;
 use App\Exceptions\InvalidLeadTransition;
+use App\Jobs\CheckWebsite;
 use App\Models\Lead;
 use App\Models\User;
 use App\Services\Leads\LeadMerger;
@@ -172,6 +173,31 @@ class LeadActions
                 if ($kept->isNot($record)) {
                     $action->redirect(LeadResource::getUrl('view', ['record' => $kept]));
                 }
+            });
+    }
+
+    public static function bulkCheckWebsites(): BulkAction
+    {
+        return BulkAction::make('bulkCheckWebsites')
+            ->label('Check websites')
+            ->icon(Heroicon::OutlinedGlobeAlt)
+            ->authorizeIndividualRecords('update')
+            ->deselectRecordsAfterCompletion()
+            ->action(function (Collection $records): void {
+                $queued = 0;
+
+                foreach ($records as $lead) {
+                    if ($lead instanceof Lead && filled($lead->website)) {
+                        CheckWebsite::forLead($lead);
+                        $queued++;
+                    }
+                }
+
+                Notification::make()
+                    ->title("Queued {$queued} website ".str('check')->plural($queued))
+                    ->body($queued < $records->count() ? ($records->count() - $queued).' had no website.' : null)
+                    ->success()
+                    ->send();
             });
     }
 

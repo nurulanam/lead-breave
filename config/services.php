@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    /*
+    | Website checks: how politely and how long LeadBreave crawls a lead's site.
+    */
+    'website_check' => [
+        'host_delay_ms' => (int) env('WEBSITE_CHECK_HOST_DELAY_MS', 1000),
+        'budget_seconds' => (int) env('WEBSITE_CHECK_BUDGET_SECONDS', 45),
+        'timeout_seconds' => (int) env('WEBSITE_CHECK_TIMEOUT_SECONDS', 10),
+        'max_bytes' => 2 * 1024 * 1024,
+        'per_domain_per_minute' => 6,
+    ],
+
 ];

@@ -4,6 +4,7 @@ namespace App\Services\Search;
 
 use App\Enums\LeadEventType;
 use App\Enums\LeadSource;
+use App\Jobs\CheckWebsite;
 use App\Models\Lead;
 use App\Models\Search;
 use App\Services\Google\Place;
@@ -86,7 +87,7 @@ class PlaceIngestor
     private function create(Place $place, ?string $phone): Lead
     {
         try {
-            return Lead::query()->create([
+            $lead = Lead::query()->create([
                 ...$this->placeAttributes($place),
                 'place_id' => $place->id,
                 'name' => $place->name,
@@ -95,6 +96,10 @@ class PlaceIngestor
                 'website' => $place->website,
                 'source' => LeadSource::Places,
             ]);
+
+            CheckWebsite::forLead($lead);
+
+            return $lead;
         } catch (UniqueConstraintViolationException) {
             return $this->refresh(Lead::query()->where('place_id', $place->id)->firstOrFail(), $place, $phone);
         }
@@ -113,11 +118,17 @@ class PlaceIngestor
             $lead->fill(['phone' => $place->phone ?? $place->internationalPhone, 'phone_e164' => $phone]);
         }
 
-        if (blank($lead->website) && filled($place->website)) {
+        $gainedWebsite = blank($lead->website) && filled($place->website);
+
+        if ($gainedWebsite) {
             $lead->website = $place->website;
         }
 
         $lead->save();
+
+        if ($gainedWebsite) {
+            CheckWebsite::forLead($lead);
+        }
 
         return $lead;
     }

@@ -7,6 +7,7 @@ use App\Enums\LeadEventType;
 use App\Enums\LeadStatus;
 use App\Enums\Permission;
 use App\Filament\Resources\Leads\RelationManagers\SocialsRelationManager;
+use App\Jobs\CheckWebsite;
 use App\Models\Lead;
 use App\Models\User;
 use App\Services\Leads\LeadInput;
@@ -200,6 +201,10 @@ class NeedsInfoQueue extends Page
 
         if ($changed !== []) {
             $lead->events()->create(['type' => LeadEventType::Edited, 'user_id' => auth()->id(), 'data' => ['fields' => $changed]]);
+        }
+
+        if (in_array('website', $changed, true)) {
+            CheckWebsite::forLead($lead);
         }
 
         Notification::make()->title($changed === [] ? 'Nothing to save' : 'Saved '.$lead->name)->{$changed === [] ? 'warning' : 'success'}()->send();
